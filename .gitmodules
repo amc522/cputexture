@@ -1,0 +1,3 @@
+[submodule "thirdparty/gpuformat"]
+	path = thirdparty/gpuformat
+	url = https://github.com/amc522/gpuformat
