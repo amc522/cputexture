@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- 
+     This is a Microsoft natvis file, which allows visualization of complex variables in the
+     Microsoft debugger starting with VS2012. It's a successor to the AutoExp.dat file format. 
+
+     This file needs to go into your C:\Users\<user>\Documents\Visual Studio 2011\Visualizers\
+     folder. Microsoft documentation states that it should go into a 2012 folder, but testing 
+     in June of 2013 suggests that it still needs to be the 2011 folder.
+
+     You don't need to restart Visual Studio to use it, you just need to restart the debug 
+     session. You can have multiple .natvis files and they will all be used.
+-->
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+<Type Name="cputex::internal::TextureStorage">
+  <DisplayString>{(cputex::internal::TextureStorage::Header*)mStorage}</DisplayString>
+  <Expand>
+    <Item Name="[refCount]">((cputex::internal::TextureStorage::Header*)mStorage)->strongCount</Item>
+    <Item Name="[weakRefCount]">((cputex::internal::TextureStorage::Header*)mStorage)->weakCount</Item>
+    <Item Name="[params]">((cputex::internal::TextureStorage::Header*)mStorage)->params</Item>
+    <Item Name="[surfaceCount]">((cputex::internal::TextureStorage::Header*)mStorage)->surfaceCount</Item>
+    <Item Name="[sizeInBytes]">((cputex::internal::TextureStorage::Header*)mStorage)->sizeInBytes</Item>
+    <CustomListItems>
+      <Variable Name="i" InitialValue="0"/>
+      <Loop>
+        <Item Name="mipExtent[{i}]">((cputex::Extent*)(mStorage + ((cputex::internal::TextureStorage::Header*)mStorage)->mipExtentsOffset))[i]</Item>
+        <Exec>++i</Exec>
+        <If Condition="i&gt;=((cputex::internal::TextureStorage::Header*)mStorage)->params.mips">
+          <Break/>
+        </If>
+      </Loop>
+    </CustomListItems>
+    <CustomListItems>
+      <Variable Name="i" InitialValue="0"/>
+      <Loop>
+        <Item Name="surfaceInfo[{i}]">((cputex::internal::TextureStorage::SurfaceInfo*)(mStorage + ((cputex::internal::TextureStorage::Header*)mStorage)->surfaceInfoOffset))[i]</Item>
+        <Exec>++i</Exec>
+        <If Condition="i&gt;=((cputex::internal::TextureStorage::Header*)mStorage)->surfaceCount">
+          <Break/>
+        </If>
+      </Loop>
+    </CustomListItems>
+  </Expand>
+</Type>
+ 
+</AutoVisualizer>
