@@ -340,7 +340,7 @@ namespace cputex {
         template<class T>
         [[nodiscard]]
         cputex::span<T> accessMipSurfaceDataAs(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) noexcept {
-            return (mStorage) ? mStorage->access2DSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<T>{};
+            return (mStorage) ? mStorage->accessMipSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<T>{};
         }
     };
 }
