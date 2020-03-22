@@ -6,23 +6,25 @@
 
 namespace cputex {
     namespace internal {
-        template<bool IsConst>
         class BaseSurfaceSpan {
         public:
-            using TextureStorageType = std::conditional_t<IsConst, const internal::TextureStorage, internal::TextureStorage>;
+            BaseSurfaceSpan() noexcept = default;
+            BaseSurfaceSpan(const BaseSurfaceSpan&) noexcept = default;
+            BaseSurfaceSpan(BaseSurfaceSpan&&) noexcept = default;
 
-            BaseSurfaceSpan() = default;
-            
-            BaseSurfaceSpan(TextureStorageType &textureStorage, uint32_t arraySlice, uint32_t face, uint32_t mip)
-                : mStorage(&textureStorage)
+            BaseSurfaceSpan(const cputex::internal::TextureStorage &textureStorage, uint32_t arraySlice, uint32_t face, uint32_t mip) noexcept
+                : mStorage(textureStorage)
                 , mArraySlice(static_cast<uint16_t>(arraySlice))
                 , mFace(static_cast<uint8_t>(face))
                 , mMip(static_cast<uint8_t>(mip))
             {}
 
+            BaseSurfaceSpan& operator=(const BaseSurfaceSpan&) noexcept = default;
+            BaseSurfaceSpan& operator=(BaseSurfaceSpan&&) noexcept = default;
+
             [[nodiscard]]
             bool operator==(std::nullptr_t) const noexcept {
-                return mStorage == nullptr || (*mStorage) == nullptr;
+                return mStorage == nullptr;
             }
 
             [[nodiscard]]
@@ -32,18 +34,18 @@ namespace cputex {
 
             [[nodiscard]]
             operator bool() const noexcept {
-                return mStorage != nullptr && mStorage->isValid();
+                return mStorage.isValid();
             }
 
             [[nodiscard]]
             bool empty() const noexcept {
-                return mStorage == nullptr || !mStorage->isValid();
+                return !mStorage.isValid();
             }
 
             [[nodiscard]]
             const Extent &extent() const noexcept {
                 static constexpr Extent zero{ 0, 0, 0 };
-                return (mStorage) ? mStorage->extent(mMip) : zero;
+                return (mStorage.isValid()) ? mStorage.extent(mMip) : zero;
             }
 
             [[nodiscard]]
@@ -63,39 +65,39 @@ namespace cputex {
 
             [[nodiscard]]
             TextureDimension dimension() const noexcept {
-                return (mStorage) ? mStorage->dimension() : TextureDimension::Texture1D;
+                return (mStorage.isValid()) ? mStorage.dimension() : TextureDimension::Texture1D;
             }
 
             [[nodiscard]]
             gpufmt::Format format() const noexcept {
-                return (mStorage) ? mStorage->format() : gpufmt::Format::UNDEFINED;
+                return (mStorage.isValid()) ? mStorage.format() : gpufmt::Format::UNDEFINED;
             }
 
             [[nodiscard]]
             uint32_t surfaceByteAlignment() const noexcept {
-                return (mStorage) ? mStorage->surfaceByteAligment() : 0u;
+                return (mStorage.isValid()) ? mStorage.surfaceByteAligment() : 0u;
             }
 
             [[nodiscard]]
             size_t sizeInBytes() const noexcept {
-                return (mStorage) ? mStorage->sizeInBytes(mMip, mVolumeSlice) : 0u;
+                return (mStorage.isValid()) ? mStorage.sizeInBytes(mMip) : 0u;
             }
 
             [[nodiscard]]
             cputex::span<const cputex::byte> getData() const noexcept {
-                return (mStorage) ? mStorage->getMipSurfaceData(mArraySlice, mFace, mMip) : cputex::span<const cputex::byte>{};
+                return (mStorage.isValid()) ? mStorage.getMipSurfaceData(mArraySlice, mFace, mMip) : cputex::span<const cputex::byte>{};
             }
 
             template<class T>
             [[nodiscard]]
             cputex::span<const T> getDataAs() const noexcept {
-                return (mStorage) ? mStorage->getMipSurfaceDataAs<T>(mArraySlice, mFace, mMip) : cputex::span<const T>{};
+                return (mStorage.isValid()) ? mStorage.getMipSurfaceDataAs<T>(mArraySlice, mFace, mMip) : cputex::span<const T>{};
             }
 
             [[nodiscard]]
             bool equivalentLayout(const BaseSurfaceSpan &other) const noexcept {
                 return format() == other.format() &&
-                    equivalentDimension(other);
+                    equivalentDimensions(other);
             }
 
             [[nodiscard]]
@@ -107,17 +109,17 @@ namespace cputex {
         protected:
             virtual ~BaseSurfaceSpan() = default;
 
-            TextureStorageType *mStorage = nullptr;
+            cputex::internal::TextureStorage mStorage;
             uint16_t mArraySlice = 0u;
             uint8_t mFace = 0u;
             uint8_t mMip = 0u;
         };
     }
 
-    class SurfaceView : public internal::BaseSurfaceSpan<true> {
+    class SurfaceView : public internal::BaseSurfaceSpan {
     public:
-        SurfaceView() = default;
-        SurfaceView(const internal::TextureStorage &textureStorage, uint32_t arraySlice, uint32_t face, uint32_t mip)
+        SurfaceView() noexcept = default;
+        SurfaceView(const internal::TextureStorage &textureStorage, uint32_t arraySlice, uint32_t face, uint32_t mip) noexcept
             : BaseSurfaceSpan(textureStorage, arraySlice, face, mip)
         {}
 
@@ -125,19 +127,21 @@ namespace cputex {
     };
 
     namespace internal {
-        template<bool IsConst>
         class BaseTextureSpan {
         public:
-            using TextureStorageType = std::conditional_t<IsConst, const internal::TextureStorage, internal::TextureStorage>;
-
-            BaseTextureSpan() = default;
-            explicit BaseTextureSpan(TextureStorageType &textureStorage)
-                : mStorage(&textureStorage)
+            BaseTextureSpan() noexcept = default;
+            BaseTextureSpan(const BaseTextureSpan&) noexcept = default;
+            BaseTextureSpan(BaseTextureSpan&&) noexcept = default;
+            explicit BaseTextureSpan(const cputex::internal::TextureStorage &textureStorage) noexcept
+                : mStorage(textureStorage)
             {}
+
+            BaseTextureSpan& operator=(const BaseTextureSpan&) noexcept = default;
+            BaseTextureSpan& operator=(BaseTextureSpan&&) noexcept = default;
 
             [[nodiscard]]
             bool operator==(std::nullptr_t) const noexcept {
-                return mStorage == nullptr || (*mStorage) == nullptr;
+                return mStorage == nullptr;
             }
 
             [[nodiscard]]
@@ -147,90 +151,90 @@ namespace cputex {
 
             [[nodiscard]]
             operator bool() const noexcept {
-                return mStorage != nullptr && mStorage->isValid();
+                return mStorage.isValid();
             }
 
             [[nodiscard]]
             bool empty() const noexcept {
-                return mStorage == nullptr || !mStorage->isValid();
+                return !mStorage.isValid();
             }
 
             [[nodiscard]]
             const Extent &extent(uint32_t mip = 0) const noexcept {
                 static constexpr Extent zero{ 0, 0, 0 };
-                return (mStorage) ? mStorage->extent(mip) : zero;
+                return (mStorage.isValid()) ? mStorage.extent(mip) : zero;
             }
 
             [[nodiscard]]
             uint32_t arraySize() const noexcept {
-                return (mStorage) ? mStorage->arraySize() : 0u;
+                return (mStorage.isValid()) ? mStorage.arraySize() : 0u;
             }
 
             [[nodiscard]]
             uint32_t faces() const noexcept {
-                return (mStorage) ? mStorage->faces() : 0u;
+                return (mStorage.isValid()) ? mStorage.faces() : 0u;
             }
 
             [[nodiscard]]
             uint32_t mips() const noexcept {
-                return (mStorage) ? mStorage->mips() : 0u;
+                return (mStorage.isValid()) ? mStorage.mips() : 0u;
             }
 
             [[nodiscard]]
             TextureDimension dimension() const noexcept {
-                return (mStorage) ? mStorage->dimension() : TextureDimension::Texture1D;
+                return (mStorage.isValid()) ? mStorage.dimension() : TextureDimension::Texture1D;
             }
 
             [[nodiscard]]
             gpufmt::Format format() const noexcept {
-                return (mStorage) ? mStorage->format() : gpufmt::Format::UNDEFINED;
+                return (mStorage.isValid()) ? mStorage.format() : gpufmt::Format::UNDEFINED;
             }
 
             [[nodiscard]]
             uint32_t surfaceByteAlignment() const noexcept {
-                return (mStorage) ? mStorage->surfaceByteAligment() : 0u;
+                return (mStorage.isValid()) ? mStorage.surfaceByteAligment() : 0u;
             }
 
             [[nodiscard]]
             size_t sizeInBytes() const noexcept {
-                return (mStorage) ? mStorage->sizeInBytes() : 0u;
+                return (mStorage.isValid()) ? mStorage.sizeInBytes() : 0u;
             }
 
             [[nodiscard]]
             size_t sizeInBytes(uint32_t mip) const noexcept {
-                return (mStorage) ? mStorage->sizeInBytes(mip) : 0u;
+                return (mStorage.isValid()) ? mStorage.sizeInBytes(mip) : 0u;
             }
 
             [[nodiscard]]
             uint32_t surfaceCount() const noexcept {
-                return (mStorage) ? mStorage->surfaceCount() : 0u;
+                return (mStorage.isValid()) ? mStorage.surfaceCount() : 0u;
             }
 
             [[nodiscard]]
             cputex::span<const cputex::byte> get2DSurfaceData(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0, uint32_t volumeSlice = 0) const noexcept {
-                return (mStorage) ? mStorage->get2DSurfaceData(arraySlice, face, mip, volumeSlice) : cputex::span<const cputex::byte>{};
+                return (mStorage.isValid()) ? mStorage.get2DSurfaceData(arraySlice, face, mip, volumeSlice) : cputex::span<const cputex::byte>{};
             }
 
             template<class T>
             [[nodiscard]]
             cputex::span<const T> get2DSurfaceDataAs(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0, uint32_t volumeSlice = 0) const noexcept {
-                return (mStorage) ? mStorage->get2DSurfaceDataAs<T>(arraySlice, face, mip, volumeSlice) : cputex::span<const T>{};
+                return (mStorage.isValid()) ? mStorage.get2DSurfaceDataAs<T>(arraySlice, face, mip, volumeSlice) : cputex::span<const T>{};
             }
 
             [[nodiscard]]
             cputex::SurfaceView getMipSurface(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) const noexcept {
-                return (mStorage) ? SurfaceView(*mStorage, arraySlice, face, mip) : SurfaceView();
+                return (mStorage.isValid()) ? SurfaceView(mStorage, arraySlice, face, mip) : SurfaceView();
             }
 
             [[nodiscard]]
             cputex::span<const cputex::byte> getMipSurfaceData(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) const noexcept {
-                return (mStorage) ? mStorage->getMipSurfaceData(arraySlice, face, mip) : cputex::span<const cputex::byte>{};
+                return (mStorage.isValid()) ? mStorage.getMipSurfaceData(arraySlice, face, mip) : cputex::span<const cputex::byte>{};
             }
 
             template<class T>
             [[nodiscard]]
             cputex::span<const T> getMipSurfaceDataAs(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) const noexcept {
-                return (mStorage) ? mStorage->get2DSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<const T>{};
+                return (mStorage.isValid()) ? mStorage.get2DSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<const T>{};
             }
 
             [[nodiscard]]
@@ -251,61 +255,66 @@ namespace cputex {
         protected:
             virtual ~BaseTextureSpan() = default;
 
-            TextureStorageType *mStorage = nullptr;
+            internal::TextureStorage mStorage;
         };
     }
 
-    class TextureView : public internal::BaseTextureSpan<true> {
+    class TextureView : public internal::BaseTextureSpan {
     public:
-        TextureView() = default;
-        explicit TextureView(const internal::TextureStorage &textureStorage)
+        TextureView() noexcept = default;
+        TextureView(const TextureView&) noexcept = default;
+        TextureView(TextureView&&) noexcept = default;
+        explicit TextureView(const internal::TextureStorage &textureStorage) noexcept
             : BaseTextureSpan(textureStorage)
         {}
 
         ~TextureView() override = default;
+
+        TextureView& operator=(const TextureView&) noexcept = default;
+        TextureView& operator=(TextureView&&) noexcept = default;
     };
 
-    class SurfaceSpan : public internal::BaseSurfaceSpan<false> {
+    class SurfaceSpan : public internal::BaseSurfaceSpan {
     public:
-        SurfaceSpan() = default;
-        SurfaceSpan(internal::TextureStorage &textureStorage, uint32_t arraySlice, uint32_t face, uint32_t mip)
+        SurfaceSpan() noexcept = default;
+        SurfaceSpan(internal::TextureStorage &textureStorage, uint32_t arraySlice, uint32_t face, uint32_t mip) noexcept
             : BaseSurfaceSpan(textureStorage, arraySlice, face, mip)
         {}
 
         ~SurfaceSpan() override = default;
 
         [[nodiscard]]
-        operator SurfaceView() const {
-            return (mStorage != nullptr) ? SurfaceView{ *mStorage, mArraySlice, mFace, mMip } : SurfaceView();
+        operator SurfaceView() const noexcept {
+            return (mStorage.isValid()) ? SurfaceView{ mStorage, mArraySlice, mFace, mMip } : SurfaceView();
         }
 
         [[nodiscard]]
         cputex::span<cputex::byte> accessData() noexcept {
-            return (mStorage) ? mStorage->accessMipSurfaceData(mArraySlice, mFace, mMip) : cputex::span<cputex::byte>{};
+            return (mStorage.isValid()) ? mStorage.accessMipSurfaceData(mArraySlice, mFace, mMip) : cputex::span<cputex::byte>{};
         }
 
         template<class T>
         [[nodiscard]]
         cputex::span<T> accessDataAs() noexcept {
-            return (mStorage) ? mStorage->accessMipSurfaceDataAs<T>(mArraySlice, mFace, mMip) : cputex::span<T>{};
+            return (mStorage.isValid()) ? mStorage.accessMipSurfaceDataAs<T>(mArraySlice, mFace, mMip) : cputex::span<T>{};
         }
 
         [[nodiscard]]
         cputex::span<cputex::byte> accessData(uint32_t volumeSlice) noexcept {
-            return (mStorage) ? mStorage->access2DSurfaceData(mArraySlice, mFace, mMip, volumeSlice) : cputex::span<cputex::byte>{};
+            return (mStorage.isValid()) ? mStorage.access2DSurfaceData(mArraySlice, mFace, mMip, volumeSlice) : cputex::span<cputex::byte>{};
         }
 
         template<class T>
         [[nodiscard]]
         cputex::span<T> accessDataAs(uint32_t volumeSlice) noexcept {
-            return (mStorage) ? mStorage->accessMipSurfaceDataAs<T>(mArraySlice, mFace, mMip, volumeSlice) : cputex::span<T>{};
+            return (mStorage.isValid()) ? mStorage.accessMipSurfaceDataAs<T>(mArraySlice, mFace, mMip, volumeSlice) : cputex::span<T>{};
         }
     };
 
-    class TextureSpan : public internal::BaseTextureSpan<false> {
+    class TextureSpan : public internal::BaseTextureSpan {
     public:
-        TextureSpan() = default;
-        explicit TextureSpan(internal::TextureStorage &textureStorage)
+        TextureSpan() noexcept = default;
+        explicit TextureSpan(const internal::TextureStorage &textureStorage) noexcept
             : BaseTextureSpan(textureStorage)
         {}
 
@@ -313,34 +322,34 @@ namespace cputex {
 
         [[nodiscard]]
         operator TextureView() const noexcept {
-            return (mStorage != nullptr) ? TextureView{ *mStorage } : TextureView{};
+            return (mStorage.isValid()) ? TextureView{ mStorage } : TextureView{};
         }
 
         [[nodiscard]]
         cputex::span<cputex::byte> access2DSurfaceData(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0, uint32_t volumeSlice = 0) noexcept {
-            return (mStorage) ? mStorage->access2DSurfaceData(arraySlice, face, mip, volumeSlice) : cputex::span<cputex::byte>{};
+            return (mStorage.isValid()) ? mStorage.access2DSurfaceData(arraySlice, face, mip, volumeSlice) : cputex::span<cputex::byte>{};
         }
 
         template<class T>
         [[nodiscard]]
         cputex::span<T> access2DSurfaceDataAs(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0, uint32_t volumeSlice = 0) noexcept {
-            return (mStorage) ? mStorage->access2DSurfaceDataAs<T>(arraySlice, face, mip, volumeSlice) : cputex::span<T>{};
+            return (mStorage.isValid()) ? mStorage.access2DSurfaceDataAs<T>(arraySlice, face, mip, volumeSlice) : cputex::span<T>{};
         }
 
         [[nodiscard]]
         cputex::SurfaceSpan accessMipSurface(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) noexcept {
-            return (mStorage) ? SurfaceSpan(*mStorage, arraySlice, face, mip) : SurfaceSpan();
+            return (mStorage.isValid()) ? SurfaceSpan(mStorage, arraySlice, face, mip) : SurfaceSpan();
         }
 
         [[nodiscard]]
         cputex::span<cputex::byte> accessMipSurfaceData(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) noexcept {
-            return (mStorage) ? mStorage->accessMipSurfaceData(arraySlice, face, mip) : cputex::span<cputex::byte>{};
+            return (mStorage.isValid()) ? mStorage.accessMipSurfaceData(arraySlice, face, mip) : cputex::span<cputex::byte>{};
         }
 
         template<class T>
         [[nodiscard]]
         cputex::span<T> accessMipSurfaceDataAs(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) noexcept {
-            return (mStorage) ? mStorage->accessMipSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<T>{};
+            return (mStorage.isValid()) ? mStorage.accessMipSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<T>{};
         }
     };
 }

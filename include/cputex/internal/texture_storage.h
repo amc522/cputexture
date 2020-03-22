@@ -165,11 +165,7 @@ namespace cputex::internal {
             other.mStorage = nullptr;
         }
 
-        ~TextureStorage() {
-            if(mStorage != nullptr) {
-                delete mStorage;
-            }
-        }
+        ~TextureStorage() = default;
 
         TextureStorage &operator=(const TextureStorage &) = default;
         TextureStorage &operator=(TextureStorage &&other) noexcept {
