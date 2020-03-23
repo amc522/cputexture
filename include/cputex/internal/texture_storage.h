@@ -88,7 +88,9 @@ namespace cputex::internal {
             {
                 Extent mipExtent = params.extent;
 
-                while(tempMipExtents.size() < tempMipExtents.capacity() && mipExtent.x > 0 && mipExtent.y > 0 && mipExtent.z > 0) {
+                while(tempMipExtents.size() < tempMipExtents.capacity() &&
+                      (mipExtent.x > 1 || mipExtent.y > 1 || mipExtent.z > 1))
+                {
                     tempMipExtents.emplace_back(mipExtent);
 
                     switch(params.dimension) {
@@ -107,6 +109,14 @@ namespace cputex::internal {
                         mipExtent.z >>= 1;
                         break;
                     }
+
+                    mipExtent.x = std::max(mipExtent.x, 1u);
+                    mipExtent.y = std::max(mipExtent.y, 1u);
+                    mipExtent.z = std::max(mipExtent.z, 1u);
+                }
+
+                if(tempMipExtents.size() < params.mips && mipExtent.x == 1 && mipExtent.y == 1 && mipExtent.z == 1) {
+                    tempMipExtents.emplace_back(1, 1, 1);
                 }
 
                 params.mips = static_cast<uint32_t>(tempMipExtents.size());
