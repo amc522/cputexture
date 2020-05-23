@@ -9,11 +9,14 @@ namespace cputex {
 }
 #else
 #include <span.hpp>
-#include <gpufmt/config.h>
 
 namespace cputex {
     using namespace tcb;
-
-    using byte = gpufmt::byte;
 }
 #endif
+
+#include <gpufmt/config.h>
+
+namespace cputex {
+    using byte = gpufmt::byte;
+}

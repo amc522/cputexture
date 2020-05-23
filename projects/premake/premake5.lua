@@ -81,12 +81,12 @@ workspace "cputex"
 
         filter {"configurations:Debug*"}
             libdirs {
-                "../../thirdparty/gpuformat/lib/windows_debug_x64"
+                "../../thirdparty/gpuformat/build/bin/windows_debug_x64"
             }
 
         filter {"configurations:Release*"}
             libdirs {
-                "../../thirdparty/gpuformat/lib/windows_release_x64"
+                "../../thirdparty/gpuformat/build/bin/windows_release_x64"
             }
 
         filter {}
@@ -113,12 +113,12 @@ workspace "cputex"
 
         filter {"configurations:Debug*"}
             libdirs {
-                "../../thirdparty/gpuformat/lib/windows_debug_x64"
+                "../../thirdparty/gpuformat/build/bin/windows_debug_x64"
             }
 
         filter {"configurations:Release*"}
             libdirs {
-                "../../thirdparty/gpuformat/lib/windows_release_x64"
+                "../../thirdparty/gpuformat/build/bin/windows_release_x64"
             }
 
         filter {}

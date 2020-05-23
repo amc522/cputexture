@@ -7,6 +7,7 @@
 #include <gpufmt/traits.h>
 
 #include <atomic>
+#include <memory>
 #include <vector>
 
 namespace cputex::internal {
