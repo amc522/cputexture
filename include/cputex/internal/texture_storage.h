@@ -163,7 +163,7 @@ namespace cputex::internal {
             std::copy(tempSurfaceInfos.cbegin(), tempSurfaceInfos.cend(), surfaceInfos.begin());
 
             cputex::span<cputex::byte> surfaceData{ storage.get() + header->surfaceDataOffset, header->sizeInBytes };
-            std::copy_n(initialData.cbegin(), std::min(static_cast<size_t>(initialData.size_bytes()), sizeInBytes), surfaceData.begin());
+            std::copy_n(initialData.begin(), std::min(static_cast<size_t>(initialData.size_bytes()), sizeInBytes), surfaceData.begin());
 
             mStorage = storage.release();
         }

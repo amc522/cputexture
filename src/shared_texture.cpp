@@ -141,7 +141,7 @@ namespace cputex {
         }
 
         auto sourceData = mTextureStorage.getData();
-        std::copy(sourceData.cbegin(), sourceData.cend(), clonedTexture.mTextureStorage.accessData().data());
+        std::copy(sourceData.begin(), sourceData.end(), clonedTexture.mTextureStorage.accessData().data());
 
         return clonedTexture;
     }
