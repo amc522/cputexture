@@ -1,3 +1,6 @@
+print("Generating gpuformat project...")
+os.execute(_PREMAKE_COMMAND .. " --file=../../thirdparty/gpuformat/projects/premake/premake5.lua " .. _ACTION)
+    
 workspace "cputex"
     language "C++"
     cppdialect "c++latest"
@@ -62,6 +65,12 @@ workspace "cputex"
     local binaryPath = "../../build/bin/" .. outputTriplet .. "/"
     local intermediateDir = "../../build/intermediate/" .. outputTriplet
 
+    externalproject "gpufmt"
+        location "../../thirdparty/gpuformat/projects/vs2019"
+        uuid "B8FE4E00-A4A0-79D6-8D5B-8D2A799C0027"
+        kind "StaticLib"
+        language "C++"
+
     project "cputex"
         kind "StaticLib"
 
@@ -110,16 +119,6 @@ workspace "cputex"
             "../../thirdparty/khr",
             "../../thirdparty/span/include"
         }
-
-        filter {"configurations:Debug*"}
-            libdirs {
-                "../../thirdparty/gpuformat/build/bin/windows_debug_x64"
-            }
-
-        filter {"configurations:Release*"}
-            libdirs {
-                "../../thirdparty/gpuformat/build/bin/windows_release_x64"
-            }
 
         filter {}
 
