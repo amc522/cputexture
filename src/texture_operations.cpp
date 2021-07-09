@@ -44,6 +44,7 @@ namespace cputex {
         }
     }
 
+
     template<gpufmt::Format FormatV>
     class HorizontalFlip {
     public:
@@ -51,42 +52,43 @@ namespace cputex {
         {
             using Traits = gpufmt::FormatTraits<FormatV>;
 
-            if(Traits::info.compression != gpufmt::CompressionType::None) {
+            if constexpr(Traits::info.compression != gpufmt::CompressionType::None ||
+                         Traits::info.blockExtent.x > 1 || Traits::info.blockExtent.y > 1 || Traits::info.blockExtent.z > 1 ||
+                         std::is_void_v<Traits::BlockType>)
+            {
                 return false;
             }
+            else
+            {
+                span<const Traits::BlockType> sourceTexelSpan{ reinterpret_cast<const Traits::BlockType *>(sourceSurface.data()), sourceSurface.size_bytes() / sizeof(Traits::BlockType) };
+                span<Traits::BlockType> destTexelSpan{ reinterpret_cast<Traits::BlockType *>(destSurface.data()), destSurface.size_bytes() / sizeof(Traits::BlockType) };
 
-            if(Traits::info.blockExtent.x > 1 || Traits::info.blockExtent.y > 1 || Traits::info.blockExtent.z > 1) {
-                return false;
-            }
+                using ExtentValueType = decltype(surfaceExtent.x);
 
-            span<const Traits::BlockType> sourceTexelSpan{ reinterpret_cast<const Traits::BlockType *>(sourceSurface.data()), sourceSurface.size_bytes() / sizeof(Traits::BlockType) };
-            span<Traits::BlockType> destTexelSpan{ reinterpret_cast<Traits::BlockType *>(destSurface.data()), destSurface.size_bytes() / sizeof(Traits::BlockType) };
+                ExtentValueType topRow{ 0 };
+                ExtentValueType bottomRow = surfaceExtent.y - ExtentValueType{ 1 };
 
-            using ExtentValueType = decltype(surfaceExtent.x);
+                while(topRow < bottomRow) {
+                    span<const Traits::BlockType> sourceTopRowSpan = sourceTexelSpan.subspan(static_cast<size_t>(topRow) * static_cast<size_t>(surfaceExtent.x), surfaceExtent.x);
+                    span<const Traits::BlockType> sourceBottomRowSpan = sourceTexelSpan.subspan(static_cast<size_t>(bottomRow) * static_cast<size_t>(surfaceExtent.x), surfaceExtent.x);
 
-            ExtentValueType topRow{ 0 };
-            ExtentValueType bottomRow = surfaceExtent.y - ExtentValueType{ 1 };
+                    span<Traits::BlockType> destTopRowSpan = destTexelSpan.subspan(static_cast<size_t>(topRow) * static_cast<size_t>(surfaceExtent.x), surfaceExtent.x);
+                    span<Traits::BlockType> destBottomRowSpan = destTexelSpan.subspan(static_cast<size_t>(bottomRow) * static_cast<size_t>(surfaceExtent.x), surfaceExtent.x);
 
-            while(topRow < bottomRow) {
-                span<const Traits::BlockType> sourceTopRowSpan = sourceTexelSpan.subspan(static_cast<size_t>(topRow) *static_cast<size_t>(surfaceExtent.x), surfaceExtent.x);
-                span<const Traits::BlockType> sourceBottomRowSpan = sourceTexelSpan.subspan(static_cast<size_t>(bottomRow) *static_cast<size_t>(surfaceExtent.x), surfaceExtent.x);
+                    for(ExtentValueType column{ 0u }; column < surfaceExtent.x; ++column) {
+                        const Traits::BlockType sourceTopValue = sourceTopRowSpan[column];
+                        const Traits::BlockType sourceBottomValue = sourceBottomRowSpan[column];
 
-                span<Traits::BlockType> destTopRowSpan = destTexelSpan.subspan(static_cast<size_t>(topRow) *static_cast<size_t>(surfaceExtent.x), surfaceExtent.x);
-                span<Traits::BlockType> destBottomRowSpan = destTexelSpan.subspan(static_cast<size_t>(bottomRow) *static_cast<size_t>(surfaceExtent.x), surfaceExtent.x);
+                        destTopRowSpan[column] = sourceBottomValue;
+                        destBottomRowSpan[column] = sourceTopValue;
+                    }
 
-                for(ExtentValueType column{ 0u }; column < surfaceExtent.x; ++column) {
-                    const Traits::BlockType sourceTopValue = sourceTopRowSpan[column];
-                    const Traits::BlockType sourceBottomValue = sourceBottomRowSpan[column];
-
-                    destTopRowSpan[column] = sourceBottomValue;
-                    destBottomRowSpan[column] = sourceTopValue;
+                    ++topRow;
+                    --bottomRow;
                 }
 
-                ++topRow;
-                --bottomRow;
+                return true;
             }
-
-            return true;
         }
     };
 
@@ -100,9 +102,9 @@ namespace cputex {
 
                         auto surface = texture.access2DSurfaceData(arraySlice, face, mip, volumeSlice);
                         bool result = gpufmt::visitFormat<HorizontalFlip>(texture.format(),
-                                                                             surface,
-                                                                             surface,
-                                                                             texture.extent(mip));
+                                                                          surface,
+                                                                          surface,
+                                                                          texture.extent(mip));
                         if(!result) {
                             return false;
                         }
@@ -127,9 +129,9 @@ namespace cputex {
                     for(uint32_t volumeSlice = 0; volumeSlice < mipExtent.z; ++volumeSlice) {
 
                         bool result = gpufmt::visitFormat<HorizontalFlip>(sourceTexture.format(),
-                                                                             sourceTexture.get2DSurfaceData(arraySlice, face, mip, volumeSlice),
-                                                                             destTexture.access2DSurfaceData(arraySlice, face, mip, volumeSlice),
-                                                                             sourceTexture.extent(mip));
+                                                                          sourceTexture.get2DSurfaceData(arraySlice, face, mip, volumeSlice),
+                                                                          destTexture.access2DSurfaceData(arraySlice, face, mip, volumeSlice),
+                                                                          sourceTexture.extent(mip));
                         if(!result) {
                             return false;
                         }
@@ -168,39 +170,40 @@ namespace cputex {
         {
             using Traits = gpufmt::FormatTraits<FormatV>;
 
-            if(Traits::info.compression != gpufmt::CompressionType::None) {
+            if constexpr(Traits::info.compression != gpufmt::CompressionType::None ||
+                         Traits::info.blockExtent.x > 1 || Traits::info.blockExtent.y > 1 || Traits::info.blockExtent.z > 1 ||
+                         std::is_void_v<Traits::BlockType>)
+            {
                 return false;
             }
+            else
+            {
+                span<const Traits::BlockType> sourceTexelSpan{ reinterpret_cast<const Traits::BlockType *>(sourceSurface.data()), sourceSurface.size_bytes() / sizeof(Traits::BlockType) };
+                span<Traits::BlockType> destTexelSpan{ reinterpret_cast<Traits::BlockType *>(destSurface.data()), destSurface.size_bytes() / sizeof(Traits::BlockType) };
 
-            if(Traits::info.blockExtent.x > 1 || Traits::info.blockExtent.y > 1 || Traits::info.blockExtent.z > 1) {
-                return false;
-            }
+                using ExtentValueType = decltype(surfaceExtent.x);
 
-            span<const Traits::BlockType> sourceTexelSpan{ reinterpret_cast<const Traits::BlockType *>(sourceSurface.data()), sourceSurface.size_bytes() / sizeof(Traits::BlockType) };
-            span<Traits::BlockType> destTexelSpan{ reinterpret_cast<Traits::BlockType *>(destSurface.data()), destSurface.size_bytes() / sizeof(Traits::BlockType) };
+                for(ExtentValueType row{ 0 }; row < surfaceExtent.y; ++row) {
+                    span<const Traits::BlockType> sourceRowSpan = sourceTexelSpan.subspan(static_cast<size_t>(row) * static_cast<size_t>(surfaceExtent.x));
+                    span<Traits::BlockType> destRowSpan = destTexelSpan.subspan(static_cast<size_t>(row) * static_cast<size_t>(surfaceExtent.x));
 
-            using ExtentValueType = decltype(surfaceExtent.x);
+                    ExtentValueType leftColumn{ 0 };
+                    ExtentValueType rightColumn{ surfaceExtent.x - ExtentValueType{1} };
 
-            for(ExtentValueType row{ 0 }; row < surfaceExtent.y; ++row) {
-                span<const Traits::BlockType> sourceRowSpan = sourceTexelSpan.subspan(static_cast<size_t>(row) *static_cast<size_t>(surfaceExtent.x));
-                span<Traits::BlockType> destRowSpan = destTexelSpan.subspan(static_cast<size_t>(row) *static_cast<size_t>(surfaceExtent.x));
+                    while(leftColumn < rightColumn) {
+                        const Traits::BlockType sourceLeftValue = sourceRowSpan[leftColumn];
+                        const Traits::BlockType sourceRightValue = sourceRowSpan[rightColumn];
 
-                ExtentValueType leftColumn{ 0 };
-                ExtentValueType rightColumn{ surfaceExtent.x - ExtentValueType{1} };
+                        destRowSpan[rightColumn] = sourceLeftValue;
+                        destRowSpan[leftColumn] = sourceRightValue;
 
-                while(leftColumn < rightColumn) {
-                    const Traits::BlockType sourceLeftValue = sourceRowSpan[leftColumn];
-                    const Traits::BlockType sourceRightValue = sourceRowSpan[rightColumn];
-
-                    destRowSpan[rightColumn] = sourceLeftValue;
-                    destRowSpan[leftColumn] = sourceRightValue;
-
-                    ++leftColumn;
-                    --rightColumn;
+                        ++leftColumn;
+                        --rightColumn;
+                    }
                 }
-            }
 
-            return true;
+                return true;
+            }
         }
     };
 
@@ -213,9 +216,9 @@ namespace cputex {
                     for(uint32_t volumeSlice = 0u; volumeSlice < mipExtent.z; ++volumeSlice) {
                         auto surface = texture.access2DSurfaceData(arraySlice, face, mip, volumeSlice);
                         bool result = gpufmt::visitFormat<VerticalFlip>(texture.format(),
-                                                                           surface,
-                                                                           surface,
-                                                                           texture.extent(mip));
+                                                                        surface,
+                                                                        surface,
+                                                                        texture.extent(mip));
                         if(!result) {
                             return false;
                         }
@@ -239,9 +242,9 @@ namespace cputex {
 
                     for(uint32_t volumeSlice = 0u; volumeSlice < mipExtent.z; ++volumeSlice) {
                         bool result = gpufmt::visitFormat<VerticalFlip>(sourceTexture.format(),
-                                                                           sourceTexture.get2DSurfaceData(arraySlice, face, mip, volumeSlice),
-                                                                           destTexture.access2DSurfaceData(arraySlice, face, mip, volumeSlice),
-                                                                           sourceTexture.extent(mip));
+                                                                        sourceTexture.get2DSurfaceData(arraySlice, face, mip, volumeSlice),
+                                                                        destTexture.access2DSurfaceData(arraySlice, face, mip, volumeSlice),
+                                                                        sourceTexture.extent(mip));
                         if(!result) {
                             return false;
                         }
@@ -275,74 +278,81 @@ namespace cputex {
     public:
         [[nodiscard]]
         bool operator()(cputex::SurfaceView sourceSurface, glm::uvec3 sourceOffset, cputex::SurfaceSpan destSurface, glm::uvec3 destOffset, cputex::Extent copyExtent) const noexcept {
-            if((sourceOffset.x + copyExtent.x) >= sourceSurface.extent().x ||
-               (sourceOffset.y + copyExtent.y) >= sourceSurface.extent().y ||
-               (sourceOffset.z + copyExtent.z) >= sourceSurface.extent().z)
-            {
-                return false;
-            }
-
-            if((destOffset.x + copyExtent.x) >= destSurface.extent().x ||
-               (destOffset.y + copyExtent.y) >= destSurface.extent().y ||
-               (destOffset.z + copyExtent.z) >= destSurface.extent().z)
-            {
-                return false;
-            }
-
             using Traits = gpufmt::FormatTraits<FormatV>;
 
-            if((copyExtent.x % Traits::BlockExtent.x) != 0 ||
-               (copyExtent.y % Traits::BlockExtent.y) != 0 ||
-               (copyExtent.z % Traits::BlockExtent.z) != 0)
+            if constexpr(!std::is_void_v<Traits::BlockType>)
             {
-                return false;
-            }
+                if((sourceOffset.x + copyExtent.x) >= sourceSurface.extent().x ||
+                   (sourceOffset.y + copyExtent.y) >= sourceSurface.extent().y ||
+                   (sourceOffset.z + copyExtent.z) >= sourceSurface.extent().z)
+                {
+                    return false;
+                }
 
-            if((sourceOffset.x % Traits::BlockExtent.x) != 0 ||
-               (sourceOffset.y % Traits::BlockExtent.y) != 0 ||
-               (sourceOffset.z % Traits::BlockExtent.z) != 0)
-            {
-                return false;
-            }
+                if((destOffset.x + copyExtent.x) >= destSurface.extent().x ||
+                   (destOffset.y + copyExtent.y) >= destSurface.extent().y ||
+                   (destOffset.z + copyExtent.z) >= destSurface.extent().z)
+                {
+                    return false;
+                }
 
-            if((destOffset.x % Traits::BlockExtent.x) != 0 ||
-               (destOffset.y % Traits::BlockExtent.y) != 0 ||
-               (destOffset.z % Traits::BlockExtent.z) != 0)
-            {
-                return false;
-            }
+                if((copyExtent.x % Traits::BlockExtent.x) != 0 ||
+                   (copyExtent.y % Traits::BlockExtent.y) != 0 ||
+                   (copyExtent.z % Traits::BlockExtent.z) != 0)
+                {
+                    return false;
+                }
 
-            const auto sourceData = sourceSurface.getDataAs<Traits::BlockType>();
-            auto destData = destSurface.accessDataAs<Traits::BlockType>();
+                if((sourceOffset.x % Traits::BlockExtent.x) != 0 ||
+                   (sourceOffset.y % Traits::BlockExtent.y) != 0 ||
+                   (sourceOffset.z % Traits::BlockExtent.z) != 0)
+                {
+                    return false;
+                }
 
-            const auto sourceBlockOffset = glm::uvec3{ sourceOffset.x / Traits::BlockExtent.x,
-                sourceOffset.y / Traits::BlockExtent.y,
-                sourceOffset.z / Traits::BlockExtent.z };
+                if((destOffset.x % Traits::BlockExtent.x) != 0 ||
+                   (destOffset.y % Traits::BlockExtent.y) != 0 ||
+                   (destOffset.z % Traits::BlockExtent.z) != 0)
+                {
+                    return false;
+                }
 
-            const auto destBlockOffset = glm::uvec3{ destOffset.x / Traits::BlockExtent.x,
-                destOffset.y / Traits::BlockExtent.y,
-                destOffset.z / Traits::BlockExtent.z };
+                const auto sourceData = sourceSurface.getDataAs<Traits::BlockType>();
+                auto destData = destSurface.accessDataAs<Traits::BlockType>();
 
-            const auto blockCopyExtent = glm::uvec3{ copyExtent.x / Traits::BlockExtent.x,
-                copyExtent.y / Traits::BlockExtent.y,
-                copyExtent.z / Traits::BlockExtent.z };
+                const auto sourceBlockOffset = glm::uvec3{ sourceOffset.x / Traits::BlockExtent.x,
+                    sourceOffset.y / Traits::BlockExtent.y,
+                    sourceOffset.z / Traits::BlockExtent.z };
 
-            for(size_t arraySlice = 0; arraySlice < blockCopyExtent.z; ++arraySlice) {
-                for(size_t row = 0; row < blockCopyExtent.y; ++row) {
-                    const auto sourceRow = sourceData.subspan((arraySlice + sourceBlockOffset.z) * (static_cast<size_t>(blockCopyExtent.y) *static_cast<size_t>(blockCopyExtent.x)) +
-                        (row + sourceBlockOffset.y) * blockCopyExtent.x, blockCopyExtent.x);
+                const auto destBlockOffset = glm::uvec3{ destOffset.x / Traits::BlockExtent.x,
+                    destOffset.y / Traits::BlockExtent.y,
+                    destOffset.z / Traits::BlockExtent.z };
 
-                    auto destRow = destData.subspan((arraySlice + destBlockOffset.z) * (static_cast<size_t>(blockCopyExtent.y) *static_cast<size_t>(blockCopyExtent.x)) +
-                        (row + destBlockOffset.y) * blockCopyExtent.x, blockCopyExtent.x);
+                const auto blockCopyExtent = glm::uvec3{ copyExtent.x / Traits::BlockExtent.x,
+                    copyExtent.y / Traits::BlockExtent.y,
+                    copyExtent.z / Traits::BlockExtent.z };
 
-                    for(size_t column = 0; column < blockCopyExtent.x; ++column) {
-                        const auto sourceValue = sourceRow[sourceBlockOffset.x + column];
-                        destRow[destBlockOffset.x + column] = sourceValue;
+                for(size_t arraySlice = 0; arraySlice < blockCopyExtent.z; ++arraySlice) {
+                    for(size_t row = 0; row < blockCopyExtent.y; ++row) {
+                        const auto sourceRow = sourceData.subspan((arraySlice + sourceBlockOffset.z) * (static_cast<size_t>(blockCopyExtent.y) * static_cast<size_t>(blockCopyExtent.x)) +
+                                                                  (row + sourceBlockOffset.y) * blockCopyExtent.x, blockCopyExtent.x);
+
+                        auto destRow = destData.subspan((arraySlice + destBlockOffset.z) * (static_cast<size_t>(blockCopyExtent.y) * static_cast<size_t>(blockCopyExtent.x)) +
+                                                        (row + destBlockOffset.y) * blockCopyExtent.x, blockCopyExtent.x);
+
+                        for(size_t column = 0; column < blockCopyExtent.x; ++column) {
+                            const auto sourceValue = sourceRow[sourceBlockOffset.x + column];
+                            destRow[destBlockOffset.x + column] = sourceValue;
+                        }
                     }
                 }
-            }
 
-            return true;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     };
 
@@ -353,7 +363,7 @@ namespace cputex {
 
         return gpufmt::visitFormat<RegionCopy>(sourceSurface.format(), sourceSurface, sourceOffset, destSurface, destOffset, copyExtent);
     }
-    
+
     template<gpufmt::Format FormatV>
     class Decompressor {
     public:
@@ -365,7 +375,8 @@ namespace cputex {
         gpufmt::DecompressError operator()(cputex::SurfaceView compressedSurface, cputex::SurfaceSpan decompressedSurface) const noexcept {
             if constexpr(!Storage::Decompressible) {
                 return gpufmt::DecompressError::FormatNotDecompressible;
-            } else {
+            }
+            else {
                 gpufmt::Surface<const CompressedTraits::BlockType> compressedBlockSurface;
                 compressedBlockSurface.blockData = compressedSurface.getDataAs<CompressedTraits::BlockType>();
                 compressedBlockSurface.extentInBlocks = (compressedSurface.extent() + (CompressedTraits::BlockExtent - Extent{ 1, 1, 1 })) / CompressedTraits::BlockExtent;
@@ -376,17 +387,20 @@ namespace cputex {
                     decompressedBlockSurface.extentInBlocks = decompressedSurface.extent();
 
                     return Storage::decompress(compressedBlockSurface, decompressedBlockSurface);
-                } else if(compressedSurface.format() == CompressedTraits::info.decompressedFormatAlt) {
+                }
+                else if(compressedSurface.format() == CompressedTraits::info.decompressedFormatAlt) {
                     if constexpr(DecompressedTraitsAlt::info.decompressedFormatAlt != gpufmt::Format::UNDEFINED) {
                         gpufmt::Surface<DecompressedTraitsAlt::BlockType> decompressedBlockSurface;
                         decompressedBlockSurface.blockData = decompressedSurface.accessDataAs<DecompressedTraitsAlt::BlockType>();
                         decompressedBlockSurface.extentInBlocks = decompressedSurface.extent();
 
                         return Storage::decompress(compressedBlockSurface, decompressedBlockSurface);
-                    } else {
+                    }
+                    else {
                         return gpufmt::DecompressError::FormatNotDecompressible;
                     }
-                } else {
+                }
+                else {
                     return gpufmt::DecompressError::FormatNotDecompressible;
                 }
             }
@@ -414,7 +428,7 @@ namespace cputex {
 
         return decompressedTexture;
     }
-    
+
     bool decompressSurfaceTo(cputex::SurfaceView sourceSurface, cputex::SurfaceSpan destSurface) noexcept {
         const gpufmt::FormatInfo &info = gpufmt::formatInfo(sourceSurface.format());
 
@@ -431,11 +445,11 @@ namespace cputex {
         if(!sourceSurface.equivalentDimensions(destSurface)) {
             return false;
         }
-        
+
         gpufmt::DecompressError error = gpufmt::visitFormat<Decompressor>(sourceSurface.format(), sourceSurface, destSurface);
         return error == gpufmt::DecompressError::None;
     }
-    
+
     cputex::UniqueTexture decompressTexture(cputex::TextureView sourceTexture, bool useAltDecompressedFormat) noexcept {
         const gpufmt::FormatInfo &info = gpufmt::formatInfo(sourceTexture.format());
 
@@ -464,7 +478,7 @@ namespace cputex {
 
         return decompressedTexture;
     }
-    
+
     bool decompressTextureTo(cputex::TextureView sourceTexture, cputex::TextureSpan destTexture) noexcept {
         const gpufmt::FormatInfo &info = gpufmt::formatInfo(sourceTexture.format());
 
