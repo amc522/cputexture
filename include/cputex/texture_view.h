@@ -234,7 +234,7 @@ namespace cputex {
             template<class T>
             [[nodiscard]]
             cputex::span<const T> getMipSurfaceDataAs(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) const noexcept {
-                return (mStorage.isValid()) ? mStorage.get2DSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<const T>{};
+                return (mStorage.isValid()) ? mStorage.getMipSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<const T>{};
             }
 
             [[nodiscard]]
