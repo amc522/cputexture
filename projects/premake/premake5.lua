@@ -66,7 +66,7 @@ workspace "cputex"
     local intermediateDir = "../../build/intermediate/" .. outputTriplet
 
     externalproject "gpufmt"
-        location "../../thirdparty/gpuformat/projects/vs2019"
+        location ("../../thirdparty/gpuformat/projects/" .. _ACTION)
         uuid "B8FE4E00-A4A0-79D6-8D5B-8D2A799C0027"
         kind "StaticLib"
         language "C++"
