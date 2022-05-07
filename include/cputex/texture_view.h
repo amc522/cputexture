@@ -211,6 +211,17 @@ namespace cputex {
             }
 
             [[nodiscard]]
+            cputex::span<const cputex::byte> getData() const noexcept {
+                return (mStorage.isValid()) ? mStorage.getData() : cputex::span<const cputex::byte>{};
+            }
+
+            template<class T>
+            [[nodiscard]]
+            cputex::span<const T> getDataAs() const noexcept {
+                return (mStorage.isValid()) ? mStorage.getDataAs<T>() : cputex::span<const T>{};
+            }
+
+            [[nodiscard]]
             cputex::span<const cputex::byte> get2DSurfaceData(uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0, uint32_t volumeSlice = 0) const noexcept {
                 return (mStorage.isValid()) ? mStorage.get2DSurfaceData(arraySlice, face, mip, volumeSlice) : cputex::span<const cputex::byte>{};
             }
@@ -323,6 +334,17 @@ namespace cputex {
         [[nodiscard]]
         operator TextureView() const noexcept {
             return (mStorage.isValid()) ? TextureView{ mStorage } : TextureView{};
+        }
+
+        [[nodiscard]]
+        cputex::span<cputex::byte> accessData() noexcept {
+            return (mStorage.isValid()) ? mStorage.accessData() : cputex::span<cputex::byte>{};
+        }
+
+        template<class T>
+        [[nodiscard]]
+        cputex::span<T> accessDataAs() noexcept {
+            return (mStorage.isValid()) ? mStorage.accessDataAs<T>() : cputex::span<T>{};
         }
 
         [[nodiscard]]

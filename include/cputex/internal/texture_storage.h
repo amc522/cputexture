@@ -582,10 +582,24 @@ namespace cputex::internal {
             return cputex::span<cputex::byte>(mStorage + header->surfaceDataOffset, header->sizeInBytes);
         }
 
+        template<class T>
+        [[nodiscard]]
+        cputex::span<T> accessDataAs() noexcept {
+            const Header *header = getHeader();
+            return cputex::span<T>(reinterpret_cast<T*>(mStorage + header->surfaceDataOffset), header->sizeInBytes);
+        }
+
         [[nodiscard]]
         cputex::span<const cputex::byte> getData() const noexcept {
             const Header *header = getHeader();
             return cputex::span<const cputex::byte>(mStorage + header->surfaceDataOffset, header->sizeInBytes);
+        }
+
+        template<class T>
+        [[nodiscard]]
+        cputex::span<const T> getDataAs() const noexcept {
+            const Header *header = getHeader();
+            return cputex::span<const T>(reinterpret_cast<const T*>(mStorage + header->surfaceDataOffset, header->sizeInBytes));
         }
 
         cputex::byte *mStorage = nullptr;
