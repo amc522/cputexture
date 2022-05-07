@@ -118,7 +118,7 @@ namespace cputex {
         }
 
         cputex::Extent sourceBlockExtent = mBlockSampler.blockExtent();
-        cputex::Extent surfaceBlockExtent = (source.extent() + (sourceBlockExtent - 1u)) / sourceBlockExtent;
+        cputex::Extent surfaceBlockExtent = (source.extent() + (sourceBlockExtent - ExtentComponent(1))) / sourceBlockExtent;
 
         std::vector<gpufmt::SampleVariant> samples;
         samples.resize(mBlockSampler.blockTexelCount());
@@ -130,9 +130,9 @@ namespace cputex {
         blockSurface.extentInBlocks = surfaceBlockExtent;
 
         size_t sourceByteOffset = 0;
-        for(uint32_t zBlock = 0; zBlock < surfaceBlockExtent.z; ++zBlock) {
-            for(uint32_t yBlock = 0; yBlock < surfaceBlockExtent.y; ++yBlock) {
-                for(uint32_t xBlock = 0; xBlock < surfaceBlockExtent.x; ++xBlock) {
+        for(ExtentComponent zBlock = 0; zBlock < surfaceBlockExtent.z; ++zBlock) {
+            for(ExtentComponent yBlock = 0; yBlock < surfaceBlockExtent.y; ++yBlock) {
+                for(ExtentComponent xBlock = 0; xBlock < surfaceBlockExtent.x; ++xBlock) {
                     gpufmt::BlockSampleError error = mBlockSampler.variantSampleTo(blockSurface, { xBlock, yBlock, zBlock }, samples);
                     sourceByteOffset += sourceInfo.blockByteSize;
 
@@ -153,13 +153,13 @@ namespace cputex {
                     }
 
                     gpufmt::Extent destTexel{ xBlock * sourceBlockExtent.x, yBlock * sourceBlockExtent.y, zBlock * sourceBlockExtent.z };
-                    uint32_t destTexelOffset = destTexel.z * (dest.extent().y * dest.extent().x) + destTexel.y * dest.extent().x + destTexel.x;
+                    SizeType destTexelOffset = destTexel.z * (dest.extent().y * dest.extent().x) + destTexel.y * dest.extent().x + destTexel.x;
                     gpufmt::span<gpufmt::byte> destSpan = dest.accessDataAs<gpufmt::byte>();
                     destSpan = destSpan.subspan(destTexelOffset * destInfo.blockByteSize);
 
                     size_t byteOffset = 0;
-                    for(uint32_t y = 0; y < sourceBlockExtent.y; ++y) {
-                        for(uint32_t x = 0; x < sourceBlockExtent.x; ++x) {
+                    for(ExtentComponent y = 0; y < sourceBlockExtent.y; ++y) {
+                        for(ExtentComponent x = 0; x < sourceBlockExtent.x; ++x) {
                             gpufmt::WriteError writeError = mWriter.writeTo(samples[y * sourceBlockExtent.x + x], destSpan.subspan(byteOffset, destInfo.blockByteSize));
 
                             switch(writeError)
@@ -205,9 +205,9 @@ namespace cputex {
             return ConvertError::SourceAndDestinationNotEquivalent;
         }
 
-        for(uint32_t arraySlice = 0; arraySlice < dest.arraySize(); ++arraySlice) {
-            for(uint32_t face = 0; face < dest.faces(); ++face) {
-                for(uint32_t mip = 0; mip < dest.mips(); ++mip) {
+        for(CountType arraySlice = 0; arraySlice < dest.arraySize(); ++arraySlice) {
+            for(CountType face = 0; face < dest.faces(); ++face) {
+                for(CountType mip = 0; mip < dest.mips(); ++mip) {
                     ConvertError error = convertTo(source.getMipSurface(arraySlice, face, mip),
                                                    dest.accessMipSurface(arraySlice, face, mip));
 

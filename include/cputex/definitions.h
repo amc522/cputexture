@@ -6,6 +6,7 @@
 
 namespace cputex {
     using Extent = gpufmt::Extent;
+    using ExtentComponent = gpufmt::ExtentComponent;
     using Format = gpufmt::Format;
 
     enum class TextureDimension {
@@ -19,9 +20,9 @@ namespace cputex {
         gpufmt::Format format = gpufmt::Format::UNDEFINED;
         TextureDimension dimension = TextureDimension::Texture2D;
         Extent extent;
-        uint32_t arraySize = 0u;
-        uint32_t faces = 0u;
-        uint32_t mips = 0u;
-        uint32_t surfaceByteAlignment = 4u;
+        cputex::CountType arraySize = 0u;
+        cputex::CountType faces = 0u;
+        cputex::CountType mips = 0u;
+        cputex::CountType surfaceByteAlignment = 4u;
     };
 }

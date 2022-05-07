@@ -5,15 +5,15 @@
 
 namespace cputex {
     [[nodiscard]]
-    inline uint32_t maxMips(const cputex::Extent &extent) noexcept {
-        const uint32_t maxExtent(std::max(extent.x, std::max(extent.y, extent.z)));
+    inline cputex::CountType maxMips(const cputex::Extent &extent) noexcept {
+        const cputex::CountType maxExtent(std::max(extent.x, std::max(extent.y, extent.z)));
 
-        return static_cast<uint32_t>(std::log2(maxExtent)) + 1u;
+        return static_cast<cputex::CountType>(std::log2(maxExtent)) + cputex::CountType(1);
     }
 
     template<class T>
     [[nodiscard]]
-    inline uint32_t maxMips(T extent) noexcept {
-        return static_cast<uint32_t>(std::log2(extent)) + T(1);
+    inline cputex::CountType maxMips(T extent) noexcept {
+        return static_cast<cputex::CountType>(std::log2(extent)) + cputex::CountType(1);
     }
 }

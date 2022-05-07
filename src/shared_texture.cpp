@@ -72,19 +72,19 @@ namespace cputex {
         return !mTextureStorage.isValid();
     }
 
-    const Extent& SharedTexture::extent(uint32_t mip) const noexcept {
+    const Extent& SharedTexture::extent(CountType mip) const noexcept {
         return mTextureStorage.extent(mip);
     }
 
-    uint32_t SharedTexture::arraySize() const noexcept {
+    CountType SharedTexture::arraySize() const noexcept {
         return mTextureStorage.arraySize();
     }
 
-    uint32_t SharedTexture::faces() const noexcept {
+    CountType SharedTexture::faces() const noexcept {
         return mTextureStorage.faces();
     }
 
-    uint32_t SharedTexture::mips() const noexcept {
+    CountType SharedTexture::mips() const noexcept {
         return mTextureStorage.mips();
     }
 
@@ -96,31 +96,31 @@ namespace cputex {
         return mTextureStorage.format();
     }
 
-    uint32_t SharedTexture::surfaceByteAlignment() const noexcept {
+    CountType SharedTexture::surfaceByteAlignment() const noexcept {
         return mTextureStorage.surfaceByteAligment();
     }
 
-    size_t SharedTexture::sizeInBytes() const noexcept {
+    cputex::SizeType SharedTexture::sizeInBytes() const noexcept {
         return mTextureStorage.sizeInBytes();
     }
 
-    size_t SharedTexture::sizeInBytes(uint32_t mip) const noexcept {
+    cputex::SizeType SharedTexture::sizeInBytes(CountType mip) const noexcept {
         return mTextureStorage.sizeInBytes(mip);
     }
 
-    uint32_t SharedTexture::surfaceCount() const noexcept {
+    CountType SharedTexture::surfaceCount() const noexcept {
         return mTextureStorage.surfaceCount();
     }
 
-    cputex::span<const cputex::byte> SharedTexture::get2DSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip, uint32_t volumeSlice) const noexcept {
+    cputex::span<const cputex::byte> SharedTexture::get2DSurfaceData(CountType arraySlice, CountType face, CountType mip, CountType volumeSlice) const noexcept {
         return mTextureStorage.get2DSurfaceData(arraySlice, face, mip, volumeSlice);
     }
 
-    cputex::SurfaceView SharedTexture::getMipSurface(uint32_t arraySlice, uint32_t face, uint32_t mip) const noexcept {
+    cputex::SurfaceView SharedTexture::getMipSurface(CountType arraySlice, CountType face, CountType mip) const noexcept {
         return cputex::SurfaceView(mTextureStorage, arraySlice, face, mip);
     }
 
-    cputex::span<const cputex::byte> SharedTexture::getMipSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip) const noexcept {
+    cputex::span<const cputex::byte> SharedTexture::getMipSurfaceData(CountType arraySlice, CountType face, CountType mip) const noexcept {
         return mTextureStorage.getMipSurfaceData(arraySlice, face, mip);
     }
 

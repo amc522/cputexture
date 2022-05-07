@@ -14,19 +14,19 @@ namespace cputex {
         const cputex::Extent &blockExtent() const noexcept;
 
         [[nodiscard]]
-        size_t blockTexelCount() const noexcept;
+        cputex::CountType blockTexelCount() const noexcept;
 
         [[nodiscard]]
-        gpufmt::SampleVariant sample(glm::vec3 uvCoords, uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) const noexcept;
+        gpufmt::SampleVariant sample(glm::vec3 uvCoords, cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
 
         [[nodiscard]]
-        gpufmt::SampleVariant sample(glm::vec3 uvCoords, cputex::span<gpufmt::SampleVariant> blockSamples, uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) const noexcept;
+        gpufmt::SampleVariant sample(glm::vec3 uvCoords, cputex::span<gpufmt::SampleVariant> blockSamples, cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
 
         [[nodiscard]]
-        gpufmt::SampleVariant load(glm::ivec3 texel, uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) const noexcept;
+        gpufmt::SampleVariant load(cputex::Extent texel, cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
 
         [[nodiscard]]
-        gpufmt::SampleVariant load(glm::ivec3 texel, cputex::span<gpufmt::SampleVariant> blockSamples, uint32_t arraySlice = 0, uint32_t face = 0, uint32_t mip = 0) const noexcept;
+        gpufmt::SampleVariant load(cputex::Extent texel, cputex::span<gpufmt::SampleVariant> blockSamples, cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
 
     private:
         TextureView mTexture;

@@ -35,9 +35,9 @@ namespace cputex {
     }
 
     void clear(cputex::TextureSpan texture, const glm::dvec4 &clearColor) noexcept {
-        for(uint32_t arraySlice = 0; arraySlice < texture.arraySize(); ++arraySlice) {
-            for(uint32_t face = 0; face < texture.faces(); ++face) {
-                for(uint32_t mip = 0; mip < texture.mips(); ++mip) {
+        for(CountType arraySlice = 0; arraySlice < texture.arraySize(); ++arraySlice) {
+            for(CountType face = 0; face < texture.faces(); ++face) {
+                for(CountType mip = 0; mip < texture.mips(); ++mip) {
                     clear(texture.accessMipSurface(arraySlice, face, mip), clearColor);
                 }
             }
@@ -93,12 +93,12 @@ namespace cputex {
     };
 
     bool flipHorizontal(cputex::TextureSpan texture) noexcept {
-        for(uint32_t arraySlice = 0u; arraySlice < texture.arraySize(); ++arraySlice) {
-            for(uint32_t face = 0; face < texture.faces(); ++face) {
-                for(uint32_t mip = 0u; mip < texture.mips(); ++mip) {
+        for(CountType arraySlice = 0u; arraySlice < texture.arraySize(); ++arraySlice) {
+            for(CountType face = 0; face < texture.faces(); ++face) {
+                for(CountType mip = 0u; mip < texture.mips(); ++mip) {
                     const Extent &mipExtent = texture.extent(mip);
 
-                    for(uint32_t volumeSlice = 0; volumeSlice < mipExtent.z; ++volumeSlice) {
+                    for(CountType volumeSlice = 0; volumeSlice < mipExtent.z; ++volumeSlice) {
 
                         auto surface = texture.access2DSurfaceData(arraySlice, face, mip, volumeSlice);
                         bool result = gpufmt::visitFormat<HorizontalFlip>(texture.format(),
@@ -121,12 +121,12 @@ namespace cputex {
             return false;
         }
 
-        for(uint32_t arraySlice = 0u; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
-            for(uint32_t face = 0; face < sourceTexture.faces(); ++face) {
-                for(uint32_t mip = 0u; mip < sourceTexture.mips(); ++mip) {
+        for(CountType arraySlice = 0u; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
+            for(CountType face = 0; face < sourceTexture.faces(); ++face) {
+                for(CountType mip = 0u; mip < sourceTexture.mips(); ++mip) {
                     const Extent &mipExtent = sourceTexture.extent(mip);
 
-                    for(uint32_t volumeSlice = 0; volumeSlice < mipExtent.z; ++volumeSlice) {
+                    for(CountType volumeSlice = 0; volumeSlice < mipExtent.z; ++volumeSlice) {
 
                         bool result = gpufmt::visitFormat<HorizontalFlip>(sourceTexture.format(),
                                                                           sourceTexture.get2DSurfaceData(arraySlice, face, mip, volumeSlice),
@@ -208,12 +208,12 @@ namespace cputex {
     };
 
     bool flipVertical(cputex::TextureSpan texture) noexcept {
-        for(uint32_t arraySlice = 0u; arraySlice < texture.arraySize(); ++arraySlice) {
-            for(uint32_t face = 0; face < texture.faces(); ++face) {
-                for(uint32_t mip = 0u; mip < texture.mips(); ++mip) {
+        for(CountType arraySlice = 0u; arraySlice < texture.arraySize(); ++arraySlice) {
+            for(CountType face = 0; face < texture.faces(); ++face) {
+                for(CountType mip = 0u; mip < texture.mips(); ++mip) {
                     const Extent &mipExtent = texture.extent(mip);
 
-                    for(uint32_t volumeSlice = 0u; volumeSlice < mipExtent.z; ++volumeSlice) {
+                    for(CountType volumeSlice = 0u; volumeSlice < mipExtent.z; ++volumeSlice) {
                         auto surface = texture.access2DSurfaceData(arraySlice, face, mip, volumeSlice);
                         bool result = gpufmt::visitFormat<VerticalFlip>(texture.format(),
                                                                         surface,
@@ -235,12 +235,12 @@ namespace cputex {
             return false;
         }
 
-        for(uint32_t arraySlice = 0u; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
-            for(uint32_t face = 0; face < sourceTexture.faces(); ++face) {
-                for(uint32_t mip = 0u; mip < sourceTexture.mips(); ++mip) {
+        for(CountType arraySlice = 0u; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
+            for(CountType face = 0; face < sourceTexture.faces(); ++face) {
+                for(CountType mip = 0u; mip < sourceTexture.mips(); ++mip) {
                     const Extent &mipExtent = sourceTexture.extent(mip);
 
-                    for(uint32_t volumeSlice = 0u; volumeSlice < mipExtent.z; ++volumeSlice) {
+                    for(CountType volumeSlice = 0u; volumeSlice < mipExtent.z; ++volumeSlice) {
                         bool result = gpufmt::visitFormat<VerticalFlip>(sourceTexture.format(),
                                                                         sourceTexture.get2DSurfaceData(arraySlice, face, mip, volumeSlice),
                                                                         destTexture.access2DSurfaceData(arraySlice, face, mip, volumeSlice),
@@ -277,7 +277,7 @@ namespace cputex {
     class RegionCopy {
     public:
         [[nodiscard]]
-        bool operator()(cputex::SurfaceView sourceSurface, glm::uvec3 sourceOffset, cputex::SurfaceSpan destSurface, glm::uvec3 destOffset, cputex::Extent copyExtent) const noexcept {
+        bool operator()(cputex::SurfaceView sourceSurface, cputex::Extent sourceOffset, cputex::SurfaceSpan destSurface, cputex::Extent destOffset, cputex::Extent copyExtent) const noexcept {
             using Traits = gpufmt::FormatTraits<FormatV>;
 
             if constexpr(!std::is_void_v<Traits::BlockType>)
@@ -320,27 +320,27 @@ namespace cputex {
                 const auto sourceData = sourceSurface.getDataAs<Traits::BlockType>();
                 auto destData = destSurface.accessDataAs<Traits::BlockType>();
 
-                const auto sourceBlockOffset = glm::uvec3{ sourceOffset.x / Traits::BlockExtent.x,
+                const auto sourceBlockOffset = cputex::Extent{ sourceOffset.x / Traits::BlockExtent.x,
                     sourceOffset.y / Traits::BlockExtent.y,
                     sourceOffset.z / Traits::BlockExtent.z };
 
-                const auto destBlockOffset = glm::uvec3{ destOffset.x / Traits::BlockExtent.x,
+                const auto destBlockOffset = cputex::Extent{ destOffset.x / Traits::BlockExtent.x,
                     destOffset.y / Traits::BlockExtent.y,
                     destOffset.z / Traits::BlockExtent.z };
 
-                const auto blockCopyExtent = glm::uvec3{ copyExtent.x / Traits::BlockExtent.x,
+                const auto blockCopyExtent = cputex::Extent{ copyExtent.x / Traits::BlockExtent.x,
                     copyExtent.y / Traits::BlockExtent.y,
                     copyExtent.z / Traits::BlockExtent.z };
 
-                for(size_t arraySlice = 0; arraySlice < blockCopyExtent.z; ++arraySlice) {
-                    for(size_t row = 0; row < blockCopyExtent.y; ++row) {
+                for(CountType arraySlice = 0; arraySlice < blockCopyExtent.z; ++arraySlice) {
+                    for(CountType row = 0; row < blockCopyExtent.y; ++row) {
                         const auto sourceRow = sourceData.subspan((arraySlice + sourceBlockOffset.z) * (static_cast<size_t>(blockCopyExtent.y) * static_cast<size_t>(blockCopyExtent.x)) +
                                                                   (row + sourceBlockOffset.y) * blockCopyExtent.x, blockCopyExtent.x);
 
                         auto destRow = destData.subspan((arraySlice + destBlockOffset.z) * (static_cast<size_t>(blockCopyExtent.y) * static_cast<size_t>(blockCopyExtent.x)) +
                                                         (row + destBlockOffset.y) * blockCopyExtent.x, blockCopyExtent.x);
 
-                        for(size_t column = 0; column < blockCopyExtent.x; ++column) {
+                        for(CountType column = 0; column < blockCopyExtent.x; ++column) {
                             const auto sourceValue = sourceRow[sourceBlockOffset.x + column];
                             destRow[destBlockOffset.x + column] = sourceValue;
                         }
@@ -356,7 +356,7 @@ namespace cputex {
         }
     };
 
-    bool copySurfaceRegionTo(cputex::SurfaceView sourceSurface, glm::uvec3 sourceOffset, cputex::SurfaceSpan destSurface, glm::uvec3 destOffset, cputex::Extent copyExtent) noexcept {
+    bool copySurfaceRegionTo(cputex::SurfaceView sourceSurface, cputex::Extent sourceOffset, cputex::SurfaceSpan destSurface, cputex::Extent destOffset, cputex::Extent copyExtent) noexcept {
         if(sourceSurface.format() != destSurface.format()) {
             return false;
         }
@@ -468,9 +468,9 @@ namespace cputex {
 
         cputex::UniqueTexture decompressedTexture{ params };
 
-        for(uint32_t arraySlice = 0; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
-            for(uint32_t face = 0; face < sourceTexture.faces(); ++face) {
-                for(uint32_t mip = 0; mip < sourceTexture.mips(); ++mip) {
+        for(CountType arraySlice = 0; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
+            for(CountType face = 0; face < sourceTexture.faces(); ++face) {
+                for(CountType mip = 0; mip < sourceTexture.mips(); ++mip) {
                     decompressSurfaceTo(sourceTexture.getMipSurface(arraySlice, face, mip), decompressedTexture.accessMipSurface(arraySlice, face, mip));
                 }
             }
@@ -496,9 +496,9 @@ namespace cputex {
             return false;
         }
 
-        for(uint32_t arraySlice = 0; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
-            for(uint32_t face = 0; face < sourceTexture.faces(); ++face) {
-                for(uint32_t mip = 0; mip < sourceTexture.mips(); ++mip) {
+        for(CountType arraySlice = 0; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
+            for(CountType face = 0; face < sourceTexture.faces(); ++face) {
+                for(CountType mip = 0; mip < sourceTexture.mips(); ++mip) {
                     if(!decompressSurfaceTo(sourceTexture.getMipSurface(arraySlice, face, mip), destTexture.accessMipSurface(arraySlice, face, mip))) {
                         return false;
                     }

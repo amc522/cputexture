@@ -20,7 +20,7 @@ namespace cputex {
     [[nodiscard]]
     cputex::UniqueTexture flipVerticalCopy(cputex::TextureView texture) noexcept;
 
-    bool copySurfaceRegionTo(cputex::SurfaceView sourceSurface, glm::uvec3 sourceOffset, cputex::SurfaceSpan destSurface, glm::uvec3 destOffset, cputex::Extent copyExtent) noexcept;
+    bool copySurfaceRegionTo(cputex::SurfaceView sourceSurface, cputex::Extent sourceOffset, cputex::SurfaceSpan destSurface, cputex::Extent destOffset, cputex::Extent copyExtent) noexcept;
 
     [[nodiscard]]
     cputex::UniqueTexture decompressSurface(cputex::SurfaceView sourceSurface, bool useAltDecompressedFormat) noexcept;

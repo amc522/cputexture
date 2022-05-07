@@ -40,19 +40,19 @@ namespace cputex {
         return !mTextureStorage.isValid();
     }
 
-    const Extent &UniqueTexture::extent(uint32_t mip) const noexcept {
+    const Extent &UniqueTexture::extent(CountType mip) const noexcept {
         return mTextureStorage.extent(mip);
     }
 
-    uint32_t UniqueTexture::arraySize() const noexcept {
+    CountType UniqueTexture::arraySize() const noexcept {
         return mTextureStorage.arraySize();
     }
 
-    uint32_t UniqueTexture::faces() const noexcept {
+    CountType UniqueTexture::faces() const noexcept {
         return mTextureStorage.faces();
     }
 
-    uint32_t UniqueTexture::mips() const noexcept {
+    CountType UniqueTexture::mips() const noexcept {
         return mTextureStorage.mips();
     }
 
@@ -64,43 +64,43 @@ namespace cputex {
         return mTextureStorage.format();
     }
 
-    uint32_t UniqueTexture::surfaceByteAlignment() const noexcept {
+    CountType UniqueTexture::surfaceByteAlignment() const noexcept {
         return mTextureStorage.surfaceByteAligment();
     }
 
-    size_t UniqueTexture::sizeInBytes() const noexcept {
+    SizeType UniqueTexture::sizeInBytes() const noexcept {
         return mTextureStorage.sizeInBytes();
     }
 
-    size_t UniqueTexture::sizeInBytes(uint32_t mip) const noexcept {
+    SizeType UniqueTexture::sizeInBytes(CountType mip) const noexcept {
         return mTextureStorage.sizeInBytes(mip);
     }
 
-    uint32_t UniqueTexture::surfaceCount() const noexcept {
+    CountType UniqueTexture::surfaceCount() const noexcept {
         return mTextureStorage.surfaceCount();
     }
 
-    cputex::span<const cputex::byte> UniqueTexture::get2DSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip, uint32_t volumeSlice) const noexcept {
+    cputex::span<const cputex::byte> UniqueTexture::get2DSurfaceData(CountType arraySlice, CountType face, CountType mip, CountType volumeSlice) const noexcept {
         return mTextureStorage.get2DSurfaceData(arraySlice, face, mip, volumeSlice);
     }
 
-    cputex::span<cputex::byte> UniqueTexture::access2DSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip, uint32_t volumeSlice) noexcept {
+    cputex::span<cputex::byte> UniqueTexture::access2DSurfaceData(CountType arraySlice, CountType face, CountType mip, CountType volumeSlice) noexcept {
         return mTextureStorage.access2DSurfaceData(arraySlice, face, mip, volumeSlice);
     }
 
-    cputex::span<const cputex::byte> UniqueTexture::getMipSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip) const noexcept {
+    cputex::span<const cputex::byte> UniqueTexture::getMipSurfaceData(CountType arraySlice, CountType face, CountType mip) const noexcept {
         return mTextureStorage.getMipSurfaceData(arraySlice, face, mip);
     }
 
-    cputex::SurfaceView UniqueTexture::getMipSurface(uint32_t arraySlice, uint32_t face, uint32_t mip) const noexcept {
+    cputex::SurfaceView UniqueTexture::getMipSurface(CountType arraySlice, CountType face, CountType mip) const noexcept {
         return cputex::SurfaceView(mTextureStorage, arraySlice, face, mip);
     }
 
-    cputex::span<cputex::byte> UniqueTexture::accessMipSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip) noexcept {
+    cputex::span<cputex::byte> UniqueTexture::accessMipSurfaceData(CountType arraySlice, CountType face, CountType mip) noexcept {
         return mTextureStorage.accessMipSurfaceData(arraySlice, face, mip);
     }
 
-    cputex::SurfaceSpan UniqueTexture::accessMipSurface(uint32_t arraySlice, uint32_t face, uint32_t mip) noexcept {
+    cputex::SurfaceSpan UniqueTexture::accessMipSurface(CountType arraySlice, CountType face, CountType mip) noexcept {
         return cputex::SurfaceSpan(mTextureStorage, arraySlice, face, mip);
     }
 

@@ -14,12 +14,12 @@ namespace cputex::internal {
     class TextureStorage {
     private:
         struct SurfaceInfo {
-            size_t offset;
-            size_t sizeInBytes;
+            cputex::SizeType offset;
+            cputex::SizeType sizeInBytes;
         };
     public:
         struct Header {
-            Header(int strongCount_, const TextureParams &params_, uint32_t surfaceCount_, size_t sizeInBytes_)
+            Header(int strongCount_, const TextureParams &params_, CountType surfaceCount_, SizeType sizeInBytes_)
                 : strongCount(strongCount_)
                 , params(params_)
                 , surfaceCount(surfaceCount_)
@@ -33,11 +33,11 @@ namespace cputex::internal {
             mutable std::atomic_int strongCount;
             mutable std::atomic_int weakCount;
             TextureParams params;
-            uint32_t surfaceCount;
-            size_t sizeInBytes;
-            size_t mipExtentsOffset;
-            size_t surfaceInfoOffset;
-            size_t surfaceDataOffset;
+            cputex::CountType surfaceCount;
+            cputex::SizeType sizeInBytes;
+            cputex::SizeType mipExtentsOffset;
+            cputex::SizeType surfaceInfoOffset;
+            cputex::SizeType surfaceDataOffset;
         };
 
         TextureStorage() noexcept= default;
@@ -76,15 +76,15 @@ namespace cputex::internal {
                 return;
             }
 
-            params.surfaceByteAlignment = std::max(params.surfaceByteAlignment, 1u);
+            params.surfaceByteAlignment = std::max(params.surfaceByteAlignment, cputex::CountType(1));
 
-            params.extent.y = std::max(params.extent.y, decltype(params.extent.y)(1));
-            params.extent.z = std::max(params.extent.z, decltype(params.extent.y)(1));
+            params.extent.y = std::max(params.extent.y, cputex::ExtentComponent(1));
+            params.extent.z = std::max(params.extent.z, cputex::ExtentComponent(1));
 
             const gpufmt::FormatInfo &info = gpufmt::formatInfo(params.format);
 
             std::vector<Extent> tempMipExtents;
-            tempMipExtents.reserve(std::min(params.mips, 15u)); //max number of mips for a 16384 texture
+            tempMipExtents.reserve(std::min(params.mips, cputex::CountType(15))); //max number of mips for a 16384 texture
 
             {
                 Extent mipExtent = params.extent;
@@ -111,31 +111,31 @@ namespace cputex::internal {
                         break;
                     }
 
-                    mipExtent.x = std::max(mipExtent.x, 1u);
-                    mipExtent.y = std::max(mipExtent.y, 1u);
-                    mipExtent.z = std::max(mipExtent.z, 1u);
+                    mipExtent.x = std::max(mipExtent.x, ExtentComponent(1));
+                    mipExtent.y = std::max(mipExtent.y, ExtentComponent(1));
+                    mipExtent.z = std::max(mipExtent.z, ExtentComponent(1));
                 }
 
                 if(tempMipExtents.size() < params.mips && mipExtent.x == 1 && mipExtent.y == 1 && mipExtent.z == 1) {
                     tempMipExtents.emplace_back(1, 1, 1);
                 }
 
-                params.mips = static_cast<uint32_t>(tempMipExtents.size());
+                params.mips = static_cast<cputex::CountType>(tempMipExtents.size());
             }
 
-            params.faces = std::max(params.faces, 1u);
+            params.faces = std::max(params.faces, cputex::CountType(1));
             std::vector<SurfaceInfo> tempSurfaceInfos;
-            size_t sizeInBytes = 0u;
+            cputex::SizeType sizeInBytes = 0u;
 
             tempSurfaceInfos.reserve(static_cast<size_t>(params.arraySize) * static_cast<size_t>(params.faces) * static_cast<size_t>(params.mips));
                 
-            for(uint32_t arraySlice = 0; arraySlice < params.arraySize; ++arraySlice) {
-                for(uint32_t face = 0; face < params.faces; ++face) {
+            for(cputex::CountType arraySlice = 0; arraySlice < params.arraySize; ++arraySlice) {
+                for(cputex::CountType face = 0; face < params.faces; ++face) {
                     for(const Extent &mipExtent : tempMipExtents) {
                         SurfaceInfo surfaceInfo;
                         surfaceInfo.offset = sizeInBytes;
-                        surfaceInfo.sizeInBytes = static_cast<size_t>((mipExtent.x + (info.blockExtent.x - 1)) / info.blockExtent.x) * ((mipExtent.y + (info.blockExtent.y - 1)) / info.blockExtent.y) * ((mipExtent.z + (info.blockExtent.z - 1)) / info.blockExtent.z) * info.blockByteSize;
-                        surfaceInfo.sizeInBytes = std::max(surfaceInfo.sizeInBytes, static_cast<size_t>(info.blockByteSize));
+                        surfaceInfo.sizeInBytes = static_cast<cputex::SizeType>((mipExtent.x + (info.blockExtent.x - 1)) / info.blockExtent.x) * ((mipExtent.y + (info.blockExtent.y - 1)) / info.blockExtent.y) * ((mipExtent.z + (info.blockExtent.z - 1)) / info.blockExtent.z) * info.blockByteSize;
+                        surfaceInfo.sizeInBytes = std::max(surfaceInfo.sizeInBytes, static_cast<cputex::SizeType>(info.blockByteSize));
 
                         //make sure everything is byte aligned
                         surfaceInfo.sizeInBytes = ((surfaceInfo.sizeInBytes + (params.surfaceByteAlignment - 1u)) / params.surfaceByteAlignment) * params.surfaceByteAlignment;
@@ -153,17 +153,17 @@ namespace cputex::internal {
             
             Header *header = new(storage.get()) Header(shared ? 1 : 0,
                                                        params,
-                                                       static_cast<uint32_t>(tempSurfaceInfos.size()),
+                                                       static_cast<cputex::CountType>(tempSurfaceInfos.size()),
                                                        sizeInBytes);
             
-            cputex::span<Extent> mipExtents{ reinterpret_cast<Extent*>(storage.get() + header->mipExtentsOffset), header->params.mips };
+            cputex::span<Extent> mipExtents{ reinterpret_cast<Extent*>(storage.get() + header->mipExtentsOffset), static_cast<cputex::span<Extent>::size_type>(header->params.mips) };
             std::copy(tempMipExtents.cbegin(), tempMipExtents.cend(), mipExtents.begin());
 
-            cputex::span<SurfaceInfo> surfaceInfos{ reinterpret_cast<SurfaceInfo*>(storage.get() + header->surfaceInfoOffset), header->surfaceCount };
+            cputex::span<SurfaceInfo> surfaceInfos{ reinterpret_cast<SurfaceInfo*>(storage.get() + header->surfaceInfoOffset), static_cast<cputex::span<Extent>::size_type>(header->surfaceCount) };
             std::copy(tempSurfaceInfos.cbegin(), tempSurfaceInfos.cend(), surfaceInfos.begin());
 
-            cputex::span<cputex::byte> surfaceData{ storage.get() + header->surfaceDataOffset, header->sizeInBytes };
-            std::copy_n(initialData.begin(), std::min(static_cast<size_t>(initialData.size_bytes()), sizeInBytes), surfaceData.begin());
+            cputex::span<cputex::byte> surfaceData{ storage.get() + header->surfaceDataOffset, static_cast<cputex::span<Extent>::size_type>(header->sizeInBytes) };
+            std::copy_n(initialData.begin(), std::min(static_cast<cputex::SizeType>(initialData.size_bytes()), sizeInBytes), surfaceData.begin());
 
             mStorage = storage.release();
         }
@@ -223,7 +223,7 @@ namespace cputex::internal {
         }
 
         [[nodiscard]]
-        const Extent &extent(uint32_t mip) const noexcept {
+        const Extent &extent(cputex::CountType mip) const noexcept {
             static constexpr Extent zero{ 0u, 0u, 0u };
 
             if(mStorage == nullptr) {
@@ -238,17 +238,17 @@ namespace cputex::internal {
         }
 
         [[nodiscard]]
-        uint32_t arraySize() const noexcept {
+        cputex::CountType arraySize() const noexcept {
             return (mStorage) ? getHeader()->params.arraySize : 0u;
         }
 
         [[nodiscard]]
-        uint32_t faces() const noexcept {
+        cputex::CountType faces() const noexcept {
             return (mStorage) ? getHeader()->params.faces : 0u;
         }
 
         [[nodiscard]]
-        uint32_t mips() const noexcept {
+        cputex::CountType mips() const noexcept {
             return (mStorage) ? getHeader()->params.mips : 0u;
         }
 
@@ -263,49 +263,49 @@ namespace cputex::internal {
         }
         
         [[nodiscard]]
-        uint32_t surfaceByteAligment() const noexcept {
+        cputex::CountType surfaceByteAligment() const noexcept {
             return (mStorage) ? getHeader()->params.surfaceByteAlignment : 0u;
         }
 
         [[nodiscard]]
-        size_t sizeInBytes() const noexcept {
+        cputex::SizeType sizeInBytes() const noexcept {
             return (mStorage) ? getHeader()->sizeInBytes : 0u;
         }
 
         [[nodiscard]]
-        size_t sizeInBytes(uint32_t mip) const noexcept {
+        cputex::SizeType sizeInBytes(cputex::CountType mip) const noexcept {
             return (mStorage) ? getSurfaceInfo(getSurfaceIndex(0u, 0u, mip)).sizeInBytes : 0u;
         }
 
         [[nodiscard]]
-        uint32_t surfaceCount() const noexcept {
+        cputex::CountType surfaceCount() const noexcept {
             return (mStorage) ? getHeader()->surfaceCount : 0u;
         }
 
         [[nodiscard]]
-        size_t getSurfaceIndex(uint32_t arraySlice, uint32_t face, uint32_t mip) const noexcept {
+        cputex::SizeType getSurfaceIndex(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) const noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
-                return 0u;
+                return cputex::SizeType(0);
             }
 
-            return static_cast<size_t>(header->params.faces) * static_cast<size_t>(header->params.mips) * static_cast<size_t>(arraySlice) +
-                static_cast<size_t>(header->params.mips) * static_cast<size_t>(face) +
-                static_cast<size_t>(mip);
+            return header->params.faces * header->params.mips * arraySlice +
+                header->params.mips * face +
+                mip;
         }
 
         [[nodiscard]]
-        size_t getSurfaceIndexUnsafe(uint32_t arraySlice, uint32_t face, uint32_t mip) const noexcept {
+        cputex::SizeType getSurfaceIndexUnsafe(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) const noexcept {
             const Header *header = getHeader();
 
-            return static_cast<size_t>(header->params.faces) *static_cast<size_t>(header->params.mips) *static_cast<size_t>(arraySlice) +
-                static_cast<size_t>(header->params.mips) *static_cast<size_t>(face) +
-                static_cast<size_t>(mip);
+            return header->params.faces * header->params.mips * arraySlice +
+                header->params.mips * face +
+                mip;
         }
 
         [[nodiscard]]
-        cputex::span<const cputex::byte> get2DSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip, uint32_t volumeSlice) const noexcept {
+        cputex::span<const cputex::byte> get2DSurfaceData(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip, cputex::CountType volumeSlice) const noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
@@ -330,13 +330,13 @@ namespace cputex::internal {
             }
 
             const SurfaceInfo &surfaceInfo = getSurfaceInfo(getSurfaceIndexUnsafe(arraySlice, face, mip));
-            size_t volumeSliceByteSize = surfaceInfo.sizeInBytes / mipExtent.z;
+            cputex::SizeType volumeSliceByteSize = surfaceInfo.sizeInBytes / mipExtent.z;
             return getData().subspan(surfaceInfo.offset + (volumeSliceByteSize * volumeSlice), volumeSliceByteSize);
         }
 
         template<class T>
         [[nodiscard]]
-        cputex::span<const T> get2DSurfaceDataAs(uint32_t arraySlice, uint32_t face, uint32_t mip, uint32_t volumeSlice) const noexcept {
+        cputex::span<const T> get2DSurfaceDataAs(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip, cputex::CountType volumeSlice) const noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
@@ -361,14 +361,14 @@ namespace cputex::internal {
             }
 
             const SurfaceInfo &surfaceInfo = getSurfaceInfo(getSurfaceIndexUnsafe(arraySlice, face, mip));
-            size_t volumeSliceByteSize = surfaceInfo.sizeInBytes / mipExtent.z;
+            cputex::SizeType volumeSliceByteSize = surfaceInfo.sizeInBytes / mipExtent.z;
             auto byteSpan = getData().subspan(surfaceInfo.offset + (volumeSliceByteSize * volumeSlice), volumeSliceByteSize);
 
             return cputex::span<const T>{reinterpret_cast<const T*>(byteSpan.data()), byteSpan.size_bytes() / sizeof(T)};
         }
 
         [[nodiscard]]
-        cputex::span<cputex::byte> access2DSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip, uint32_t volumeSlice) noexcept {
+        cputex::span<cputex::byte> access2DSurfaceData(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip, cputex::CountType volumeSlice) noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
@@ -393,13 +393,13 @@ namespace cputex::internal {
             }
 
             const SurfaceInfo &surfaceInfo = getSurfaceInfo(getSurfaceIndexUnsafe(arraySlice, face, mip));
-            size_t volumeSliceByteSize = surfaceInfo.sizeInBytes / mipExtent.z;
+            cputex::SizeType volumeSliceByteSize = surfaceInfo.sizeInBytes / mipExtent.z;
             return accessData().subspan(surfaceInfo.offset + (volumeSliceByteSize * volumeSlice), volumeSliceByteSize);
         }
 
         template<class T>
         [[nodiscard]]
-        cputex::span<T> access2DSurfaceDataAs(uint32_t arraySlice, uint32_t face, uint32_t mip, uint32_t volumeSlice) noexcept {
+        cputex::span<T> access2DSurfaceDataAs(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip, cputex::CountType volumeSlice) noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
@@ -424,14 +424,14 @@ namespace cputex::internal {
             }
 
             const SurfaceInfo &surfaceInfo = getSurfaceInfo(getSurfaceIndexUnsafe(arraySlice, face, mip));
-            size_t volumeSliceByteSize = surfaceInfo.sizeInBytes / mipExtent.z;
+            cputex::SizeType volumeSliceByteSize = surfaceInfo.sizeInBytes / mipExtent.z;
             auto byteSpan = accessData().subspan(surfaceInfo.offset + (volumeSliceByteSize * volumeSlice), volumeSliceByteSize);
 
             return cputex::span<T>{reinterpret_cast<T*>(byteSpan.data()), byteSpan.size_bytes() / sizeof(T)};
         }
 
         [[nodiscard]]
-        cputex::span<const cputex::byte> getMipSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip) const noexcept {
+        cputex::span<const cputex::byte> getMipSurfaceData(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) const noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
@@ -456,7 +456,7 @@ namespace cputex::internal {
 
         template<class T>
         [[nodiscard]]
-        cputex::span<const T> getMipSurfaceDataAs(uint32_t arraySlice, uint32_t face, uint32_t mip) const noexcept {
+        cputex::span<const T> getMipSurfaceDataAs(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) const noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
@@ -482,7 +482,7 @@ namespace cputex::internal {
         }
 
         [[nodiscard]]
-        cputex::span<cputex::byte> accessMipSurfaceData(uint32_t arraySlice, uint32_t face, uint32_t mip) noexcept {
+        cputex::span<cputex::byte> accessMipSurfaceData(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
@@ -507,7 +507,7 @@ namespace cputex::internal {
 
         template<class T>
         [[nodiscard]]
-        cputex::span<T> accessMipSurfaceDataAs(uint32_t arraySlice, uint32_t face, uint32_t mip) noexcept {
+        cputex::span<T> accessMipSurfaceDataAs(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
