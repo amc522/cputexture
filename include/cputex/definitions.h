@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cputex/config.h>
 #include <glm/vec3.hpp>
 #include <gpufmt/format.h>
 #include <gpufmt/definitions.h>
