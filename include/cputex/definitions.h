@@ -26,4 +26,8 @@ namespace cputex {
         cputex::CountType mips = 0u;
         cputex::CountType surfaceByteAlignment = 4u;
     };
+
+    constexpr cputex::ExtentComponent maxExtentComponent = 16384;
+    constexpr cputex::Extent maxExtent = { maxExtentComponent, maxExtentComponent, maxExtentComponent };
+    constexpr cputex::CountType maxMipCount = 15;
 }
