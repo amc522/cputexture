@@ -3,6 +3,8 @@
 #include <cputex/config.h>
 #include <cputex/definitions.h>
 
+#include <glm/gtx/component_wise.hpp>
+
 #include <gpufmt/format.h>
 #include <gpufmt/traits.h>
 
@@ -132,9 +134,12 @@ namespace cputex::internal {
             for(cputex::CountType arraySlice = 0; arraySlice < params.arraySize; ++arraySlice) {
                 for(cputex::CountType face = 0; face < params.faces; ++face) {
                     for(const Extent &mipExtent : tempMipExtents) {
+                        const glm::tvec3<cputex::SizeType> mipExtentSizeT = mipExtent;
+                        const glm::tvec3<cputex::SizeType> blockExtentSizeT = info.blockExtent;
+
                         SurfaceInfo surfaceInfo;
                         surfaceInfo.offset = sizeInBytes;
-                        surfaceInfo.sizeInBytes = static_cast<cputex::SizeType>((mipExtent.x + (info.blockExtent.x - 1)) / info.blockExtent.x) * ((mipExtent.y + (info.blockExtent.y - 1)) / info.blockExtent.y) * ((mipExtent.z + (info.blockExtent.z - 1)) / info.blockExtent.z) * info.blockByteSize;
+                        surfaceInfo.sizeInBytes = glm::compMul((mipExtentSizeT + (blockExtentSizeT - glm::tvec3<cputex::SizeType>(1))) / blockExtentSizeT) * info.blockByteSize;;
                         surfaceInfo.sizeInBytes = std::max(surfaceInfo.sizeInBytes, static_cast<cputex::SizeType>(info.blockByteSize));
 
                         //make sure everything is byte aligned
@@ -283,11 +288,11 @@ namespace cputex::internal {
         }
 
         [[nodiscard]]
-        cputex::SizeType getSurfaceIndex(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) const noexcept {
+        cputex::IndexType getSurfaceIndex(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) const noexcept {
             const Header *header = getHeader();
 
             if(header == nullptr) {
-                return cputex::SizeType(0);
+                return cputex::IndexType(0);
             }
 
             return header->params.faces * header->params.mips * arraySlice +
@@ -296,7 +301,7 @@ namespace cputex::internal {
         }
 
         [[nodiscard]]
-        cputex::SizeType getSurfaceIndexUnsafe(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) const noexcept {
+        cputex::IndexType getSurfaceIndexUnsafe(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) const noexcept {
             const Header *header = getHeader();
 
             return header->params.faces * header->params.mips * arraySlice +
@@ -550,7 +555,7 @@ namespace cputex::internal {
         [[nodiscard]]
         cputex::span<SurfaceInfo> getSurfaceInfos() noexcept {
             const Header *header = getHeader();
-            return cputex::span<SurfaceInfo>(reinterpret_cast<SurfaceInfo *>(mStorage + header->surfaceInfoOffset), header->surfaceCount);
+            return cputex::span<SurfaceInfo>(reinterpret_cast<SurfaceInfo*>(mStorage + header->surfaceInfoOffset), header->surfaceCount);
         }
 
         [[nodiscard]]
@@ -560,7 +565,7 @@ namespace cputex::internal {
         }
 
         [[nodiscard]]
-        const SurfaceInfo& getSurfaceInfo(size_t index) const noexcept {
+        const SurfaceInfo& getSurfaceInfo(IndexType index) const noexcept {
             return getSurfaceInfos()[index];
         }
 

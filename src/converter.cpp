@@ -129,7 +129,7 @@ namespace cputex {
         blockSurface.blockData = sourceSpan;
         blockSurface.extentInBlocks = surfaceBlockExtent;
 
-        size_t sourceByteOffset = 0;
+        cputex::SizeType sourceByteOffset = 0;
         for(ExtentComponent zBlock = 0; zBlock < surfaceBlockExtent.z; ++zBlock) {
             for(ExtentComponent yBlock = 0; yBlock < surfaceBlockExtent.y; ++yBlock) {
                 for(ExtentComponent xBlock = 0; xBlock < surfaceBlockExtent.x; ++xBlock) {
@@ -157,7 +157,7 @@ namespace cputex {
                     gpufmt::span<gpufmt::byte> destSpan = dest.accessDataAs<gpufmt::byte>();
                     destSpan = destSpan.subspan(destTexelOffset * destInfo.blockByteSize);
 
-                    size_t byteOffset = 0;
+                    cputex::SizeType byteOffset = 0;
                     for(ExtentComponent y = 0; y < sourceBlockExtent.y; ++y) {
                         for(ExtentComponent x = 0; x < sourceBlockExtent.x; ++x) {
                             gpufmt::WriteError writeError = mWriter.writeTo(samples[y * sourceBlockExtent.x + x], destSpan.subspan(byteOffset, destInfo.blockByteSize));
