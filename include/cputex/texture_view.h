@@ -5,22 +5,25 @@
 #include <gpufmt/format.h>
 
 namespace cputex {
-    namespace internal {
-        class BaseSurfaceSpan {
-        public:
-            BaseSurfaceSpan() noexcept = default;
-            BaseSurfaceSpan(const BaseSurfaceSpan&) noexcept = default;
-            BaseSurfaceSpan(BaseSurfaceSpan&&) noexcept = default;
+    class SurfaceView;
+    class SurfaceSpan;
 
-            BaseSurfaceSpan(const cputex::internal::TextureStorage &textureStorage, cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept
+    namespace internal {
+        class BaseTextureSurfaceSpan {
+        public:
+            BaseTextureSurfaceSpan() noexcept = default;
+            BaseTextureSurfaceSpan(const BaseTextureSurfaceSpan&) noexcept = default;
+            BaseTextureSurfaceSpan(BaseTextureSurfaceSpan&&) noexcept = default;
+
+            BaseTextureSurfaceSpan(const cputex::internal::TextureStorage &textureStorage, cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept
                 : mStorage(textureStorage)
                 , mArraySlice(static_cast<uint16_t>(arraySlice))
                 , mFace(static_cast<uint8_t>(face))
                 , mMip(static_cast<uint8_t>(mip))
             {}
 
-            BaseSurfaceSpan& operator=(const BaseSurfaceSpan&) noexcept = default;
-            BaseSurfaceSpan& operator=(BaseSurfaceSpan&&) noexcept = default;
+            BaseTextureSurfaceSpan& operator=(const BaseTextureSurfaceSpan&) noexcept = default;
+            BaseTextureSurfaceSpan& operator=(BaseTextureSurfaceSpan&&) noexcept = default;
 
             [[nodiscard]]
             bool operator==(std::nullptr_t) const noexcept {
@@ -31,6 +34,9 @@ namespace cputex {
             bool operator!=(std::nullptr_t) const noexcept {
                 return !operator==(nullptr);
             }
+
+            [[nodiscard]]
+            constexpr operator SurfaceView() const noexcept;
 
             [[nodiscard]]
             operator bool() const noexcept {
@@ -95,19 +101,19 @@ namespace cputex {
             }
 
             [[nodiscard]]
-            bool equivalentLayout(const BaseSurfaceSpan &other) const noexcept {
+            bool equivalentLayout(const BaseTextureSurfaceSpan &other) const noexcept {
                 return format() == other.format() &&
                     equivalentDimensions(other);
             }
 
             [[nodiscard]]
-            bool equivalentDimensions(const BaseSurfaceSpan &other) const noexcept {
+            bool equivalentDimensions(const BaseTextureSurfaceSpan &other) const noexcept {
                 return dimension() == other.dimension() &&
                     extent() == other.extent();
             }
 
         protected:
-            virtual ~BaseSurfaceSpan() = default;
+            virtual ~BaseTextureSurfaceSpan() = default;
 
             cputex::internal::TextureStorage mStorage;
             uint16_t mArraySlice = 0u;
@@ -116,14 +122,14 @@ namespace cputex {
         };
     }
 
-    class SurfaceView : public internal::BaseSurfaceSpan {
+    class TextureSurfaceView : public internal::BaseTextureSurfaceSpan {
     public:
-        SurfaceView() noexcept = default;
-        SurfaceView(const internal::TextureStorage &textureStorage, cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept
-            : BaseSurfaceSpan(textureStorage, arraySlice, face, mip)
+        TextureSurfaceView() noexcept = default;
+        TextureSurfaceView(const internal::TextureStorage &textureStorage, cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept
+            : BaseTextureSurfaceSpan(textureStorage, arraySlice, face, mip)
         {}
 
-        ~SurfaceView() override = default;
+        ~TextureSurfaceView() override = default;
     };
 
     namespace internal {
@@ -233,8 +239,8 @@ namespace cputex {
             }
 
             [[nodiscard]]
-            cputex::SurfaceView getMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept {
-                return (mStorage.isValid()) ? SurfaceView(mStorage, arraySlice, face, mip) : SurfaceView();
+            cputex::TextureSurfaceView getMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept {
+                return (mStorage.isValid()) ? TextureSurfaceView(mStorage, arraySlice, face, mip) : TextureSurfaceView();
             }
 
             [[nodiscard]]
@@ -285,18 +291,21 @@ namespace cputex {
         TextureView& operator=(TextureView&&) noexcept = default;
     };
 
-    class SurfaceSpan : public internal::BaseSurfaceSpan {
+    class TextureSurfaceSpan : public internal::BaseTextureSurfaceSpan {
     public:
-        SurfaceSpan() noexcept = default;
-        SurfaceSpan(internal::TextureStorage &textureStorage, cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept
-            : BaseSurfaceSpan(textureStorage, arraySlice, face, mip)
+        TextureSurfaceSpan() noexcept = default;
+        TextureSurfaceSpan(internal::TextureStorage &textureStorage, cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept
+            : BaseTextureSurfaceSpan(textureStorage, arraySlice, face, mip)
         {}
 
-        ~SurfaceSpan() override = default;
+        ~TextureSurfaceSpan() override = default;
 
         [[nodiscard]]
-        operator SurfaceView() const noexcept {
-            return (mStorage.isValid()) ? SurfaceView{ mStorage, mArraySlice, mFace, mMip } : SurfaceView();
+        constexpr operator SurfaceSpan() noexcept;
+
+        [[nodiscard]]
+        operator TextureSurfaceView() const noexcept {
+            return (mStorage.isValid()) ? TextureSurfaceView{ mStorage, mArraySlice, mFace, mMip } : TextureSurfaceView();
         }
 
         [[nodiscard]]
@@ -359,8 +368,8 @@ namespace cputex {
         }
 
         [[nodiscard]]
-        cputex::SurfaceSpan accessMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) noexcept {
-            return (mStorage.isValid()) ? SurfaceSpan(mStorage, arraySlice, face, mip) : SurfaceSpan();
+        cputex::TextureSurfaceSpan accessMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) noexcept {
+            return (mStorage.isValid()) ? TextureSurfaceSpan(mStorage, arraySlice, face, mip) : TextureSurfaceSpan();
         }
 
         [[nodiscard]]
@@ -374,4 +383,331 @@ namespace cputex {
             return (mStorage.isValid()) ? mStorage.accessMipSurfaceDataAs<T>(arraySlice, face, mip) : cputex::span<T>{};
         }
     };
+
+    class SurfaceView
+    {
+    public:
+        constexpr SurfaceView() noexcept = default;
+        constexpr SurfaceView(gpufmt::Format format, cputex::TextureDimension dimension, const cputex::Extent& extent, cputex::span<const cputex::byte> data) noexcept
+            : mFormat(format)
+            , mData(data.data())
+        {
+            if(dimension == TextureDimension::Texture1D)
+            {
+                mExtent.x = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.x, 1));
+                mExtent.y = 0;
+                mExtent.z = 0;
+            }
+            else if(dimension == TextureDimension::Texture2D || dimension == TextureDimension::TextureCube)
+            {
+                mExtent.x = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.x, 1));
+                mExtent.y = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.y, 1));
+                mExtent.z = 0;
+            }
+            else
+            {
+                mExtent.x = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.x, 1));
+                mExtent.y = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.y, 1));
+                mExtent.z = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.z, 1));
+            }
+        }
+
+        SurfaceView(TextureSurfaceView surfaceView) noexcept
+            : SurfaceView(surfaceView.format(), surfaceView.dimension(), surfaceView.extent(), surfaceView.getData())
+        {}
+
+        constexpr SurfaceView(const SurfaceView&) noexcept = default;
+
+        constexpr SurfaceView(SurfaceView&& other) noexcept
+            : mFormat(other.mFormat)
+            , mExtent(other.mExtent)
+            , mData(other.mData)
+        {
+            other.mFormat = gpufmt::Format::UNDEFINED;
+            other.mExtent = { 0, 0, 0 };
+            other.mData = nullptr;
+        }
+
+        ~SurfaceView() = default;
+
+        constexpr SurfaceView& operator=(const SurfaceView&) noexcept = default;
+
+        constexpr SurfaceView& operator=(SurfaceView&& other) noexcept {
+            mFormat = other.mFormat;
+            mExtent = other.mExtent;
+            mData = other.mData;
+
+            other.mFormat = gpufmt::Format::UNDEFINED;
+            other.mExtent = { 0, 0, 0 };
+            other.mData = nullptr;
+
+            return *this;
+        }
+
+        [[nodiscard]] constexpr bool operator==(std::nullptr_t)  const noexcept {
+            return mData == nullptr;
+        }
+
+        [[nodiscard]] constexpr bool operator!=(std::nullptr_t) const noexcept {
+            return mData != nullptr;
+        }
+
+        [[nodiscard]] constexpr operator bool() const noexcept {
+            return mData != nullptr;
+        }
+
+        [[nodiscard]] constexpr bool empty() const noexcept {
+            return mData == nullptr;
+        }
+
+        [[nodiscard]] constexpr Extent extent() const noexcept {
+            return {mExtent.x, std::max<cputex::ExtentComponent>(mExtent.y, 1), std::max<cputex::ExtentComponent>(mExtent.z, 1)};
+        }
+        
+        [[nodiscard]] constexpr TextureDimension dimension() const noexcept {
+            if (mExtent.y < 1) { return TextureDimension::Texture1D; }
+            else if (mExtent.z < 1) { return TextureDimension::Texture2D; }
+            else { return TextureDimension::Texture3D; }
+        }
+
+        [[nodiscard]] constexpr gpufmt::Format format() const noexcept {
+            return mFormat;
+        }
+
+        [[nodiscard]] constexpr cputex::SizeType sizeInBytes() const noexcept {
+            const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(mFormat);
+            const auto blockExtent = extent() / formatInfo.blockExtent;
+
+            return blockExtent.x * blockExtent.y * blockExtent.z * formatInfo.blockByteSize;
+        }
+
+        [[nodiscard]] constexpr cputex::SizeType volumeSliceByteSize() const noexcept {
+            const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(mFormat);
+            const auto blockExtent = extent() / formatInfo.blockExtent;
+            
+            return blockExtent.x * blockExtent.y * formatInfo.blockByteSize;
+        }
+
+        [[nodiscard]] constexpr cputex::span<const cputex::byte> getData() const noexcept {
+            return cputex::span<const cputex::byte>(mData, (size_t)sizeInBytes());
+        }
+
+        template<class T>
+        [[nodiscard]] constexpr cputex::span<const T> getDataAs() const noexcept {
+            return cputex::span<const T>(reinterpret_cast<const T*>(mData), ((size_t)sizeInBytes()) / sizeof(T));
+        }
+
+        // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
+        [[nodiscard]] constexpr cputex::SurfaceView getVolumeSlice(cputex::CountType volumeSlice) {
+            if (volumeSlice >= mExtent.z) { return {}; }
+
+            const TextureDimension viewDimension = dimension();
+            cputex::Extent newExtent = extent();
+            newExtent.z = 1;
+            const cputex::SizeType sliceByteSize = volumeSliceByteSize();
+            return SurfaceView(mFormat, (viewDimension == TextureDimension::Texture3D) ? TextureDimension::Texture2D : viewDimension, newExtent, getData().subspan(sliceByteSize * volumeSlice, sliceByteSize));
+        }
+
+        [[nodiscard]] constexpr bool equivalentLayout(const SurfaceView &other) const noexcept {
+            return mFormat == other.mFormat && mExtent == other.mExtent;
+        }
+
+        [[nodiscard]] constexpr bool equivalentDimensions(const SurfaceView &other) const noexcept {
+            return mExtent == other.mExtent;
+        }
+
+    private:
+        using SmallExtentComponent = std::conditional_t<std::is_signed_v<cputex::ExtentComponent>, int16_t, uint16_t>;
+        using SmallExtent = glm::tvec3<typename SmallExtentComponent>;
+
+        gpufmt::Format mFormat = gpufmt::Format::UNDEFINED;
+        // In other parts of the library, extent is generally initialized to be (1, 1, 1) and each component is always
+        // assumed to be at least 1. Here, extent components can have a value of 0, to help encode the intended
+        // dimension of the surface. For example, it is impossible to tell if an extent of (1, 1, 1) is a 1d, 2d, or 3d
+        // surface. This deviation is to help reduce the size of the class to stay within two pointres width.
+        SmallExtent mExtent{ 0, 0, 0 };
+        const cputex::byte* mData = nullptr;
+    };
+
+    class SurfaceSpan
+    {
+    public:
+        constexpr SurfaceSpan() noexcept = default;
+        constexpr SurfaceSpan(gpufmt::Format format, cputex::TextureDimension dimension, const cputex::Extent& extent, cputex::span<cputex::byte> data) noexcept
+            : mFormat(format)
+            , mData(data.data())
+        {
+            if(dimension == TextureDimension::Texture1D)
+            {
+                mExtent.x = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.x, 1));
+                mExtent.y = 0;
+                mExtent.z = 0;
+            }
+            else if(dimension == TextureDimension::Texture2D || dimension == TextureDimension::TextureCube)
+            {
+                mExtent.x = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.x, 1));
+                mExtent.y = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.y, 1));
+                mExtent.z = 0;
+            }
+            else
+            {
+                mExtent.x = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.x, 1));
+                mExtent.y = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.y, 1));
+                mExtent.z = static_cast<SmallExtentComponent>(std::max<cputex::ExtentComponent>(extent.z, 1));
+            }
+        }
+
+        SurfaceSpan(TextureSurfaceSpan surfaceSpan) noexcept
+        {}
+
+        constexpr SurfaceSpan(const SurfaceSpan&) noexcept = default;
+
+        constexpr SurfaceSpan(SurfaceSpan&& other) noexcept
+            : mFormat(other.mFormat)
+            , mExtent(other.mExtent)
+            , mData(other.mData)
+        {
+            other.mFormat = gpufmt::Format::UNDEFINED;
+            other.mExtent = { 0, 0, 0 };
+            other.mData = nullptr;
+        }
+
+        ~SurfaceSpan() = default;
+
+        constexpr SurfaceSpan& operator=(const SurfaceSpan&) noexcept = default;
+
+        constexpr SurfaceSpan& operator=(SurfaceSpan&& other) noexcept {
+            mFormat = other.mFormat;
+            mExtent = other.mExtent;
+            mData = other.mData;
+
+            other.mFormat = gpufmt::Format::UNDEFINED;
+            other.mExtent = { 0, 0, 0 };
+            other.mData = nullptr;
+
+            return *this;
+        }
+
+        [[nodiscard]] constexpr bool operator==(std::nullptr_t)  const noexcept {
+            return mData == nullptr;
+        }
+
+        [[nodiscard]] constexpr bool operator!=(std::nullptr_t) const noexcept {
+            return mData != nullptr;
+        }
+
+        [[nodiscard]] constexpr operator SurfaceView() const noexcept {
+            return SurfaceView(mFormat, dimension(), extent(), getData());
+        }
+
+        [[nodiscard]] constexpr operator bool() const noexcept {
+            return mData != nullptr;
+        }
+
+        [[nodiscard]] constexpr bool empty() const noexcept {
+            return mData == nullptr;
+        }
+
+        [[nodiscard]] constexpr Extent extent() const noexcept {
+            return {mExtent.x, std::max<cputex::ExtentComponent>(mExtent.y, 1), std::max<cputex::ExtentComponent>(mExtent.z, 1)};
+        }
+
+        [[nodiscard]] constexpr TextureDimension dimension() const noexcept {
+            if (mExtent.y < 1) { return TextureDimension::Texture1D; }
+            else if (mExtent.z < 1) { return TextureDimension::Texture2D; }
+            else { return TextureDimension::Texture3D; }
+        }
+
+        [[nodiscard]] constexpr gpufmt::Format format() const noexcept {
+            return mFormat;
+        }
+
+        [[nodiscard]] constexpr cputex::SizeType sizeInBytes() const noexcept {
+            const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(mFormat);
+            const auto blockExtent = extent() / formatInfo.blockExtent;
+
+            return blockExtent.x * blockExtent.y * blockExtent.z * formatInfo.blockByteSize;
+        }
+
+        [[nodiscard]] constexpr cputex::SizeType volumeSliceByteSize() const noexcept {
+            const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(mFormat);
+            const auto blockExtent = extent() / formatInfo.blockExtent;
+
+            return blockExtent.x * blockExtent.y * formatInfo.blockByteSize;
+        }
+
+        [[nodiscard]] constexpr cputex::span<const cputex::byte> getData() const noexcept {
+            return cputex::span<const cputex::byte>(mData, (size_t)sizeInBytes());
+        }
+
+        template<class T>
+        [[nodiscard]] constexpr cputex::span<const T> getDataAs() const noexcept {
+            return cputex::span<const T>(reinterpret_cast<const T*>(mData), ((size_t)sizeInBytes) / sizeof(T));
+        }
+
+        // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
+        [[nodiscard]] constexpr SurfaceView getVolumeSlice(cputex::CountType volumeSlice) const noexcept{
+            if (volumeSlice >= mExtent.z) { return {}; }
+
+            const TextureDimension viewDimension = dimension();
+            cputex::Extent newExtent = extent();
+            newExtent.z = 1;
+            const cputex::SizeType sliceByteSize = volumeSliceByteSize();
+            return SurfaceView(mFormat, (viewDimension == TextureDimension::Texture3D) ? TextureDimension::Texture2D : viewDimension, newExtent, getData().subspan(sliceByteSize * volumeSlice, sliceByteSize));
+        }
+
+        [[nodiscard]] constexpr cputex::span<cputex::byte> accessData() noexcept {
+            return cputex::span<cputex::byte>(mData, (size_t)sizeInBytes());
+        }
+
+        template<class T>
+        [[nodiscard]] constexpr cputex::span<T> accessDataAs() noexcept {
+            return cputex::span<T>(reinterpret_cast<T*>(mData), ((size_t)sizeInBytes()) / sizeof(T));
+        }
+
+        // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
+        [[nodiscard]] constexpr SurfaceSpan accessVolumeSlice(cputex::CountType volumeSlice) noexcept {
+            if (volumeSlice >= mExtent.z) { return {}; }
+
+            const TextureDimension viewDimension = dimension();
+            cputex::Extent newExtent = extent();
+            newExtent.z = 1;
+            const cputex::SizeType sliceByteSize = volumeSliceByteSize();
+            return SurfaceSpan(mFormat, (viewDimension == TextureDimension::Texture3D) ? TextureDimension::Texture2D : viewDimension, newExtent, accessData().subspan(sliceByteSize * volumeSlice, sliceByteSize));
+        }
+
+        [[nodiscard]] constexpr bool equivalentLayout(const SurfaceSpan &other) const noexcept {
+            return mFormat == other.mFormat && mExtent == other.mExtent;
+        }
+
+        [[nodiscard]] constexpr bool equivalentDimensions(const SurfaceSpan &other) const noexcept {
+            return mExtent == other.mExtent;
+        }
+
+    private:
+        using SmallExtentComponent = std::conditional_t<std::is_signed_v<cputex::ExtentComponent>, int16_t, uint16_t>;
+        using SmallExtent = glm::tvec3<typename SmallExtentComponent>;
+
+        gpufmt::Format mFormat = gpufmt::Format::UNDEFINED;
+        // In other parts of the library, extent is generally initialized to be (1, 1, 1) and each component is always
+        // assumed to be at least 1. Here, extent components can have a value of 0, to help encode the intended
+        // dimension of the surface. For example, it is impossible to tell if an extent of (1, 1, 1) is a 1d, 2d, or 3d
+        // surface. This deviation is to help reduce the size of the class to stay within two pointres width.
+        SmallExtent mExtent{ 0, 0, 0 };
+        cputex::byte* mData = nullptr;
+    };
+
+    static_assert(sizeof(SurfaceView) <= 16);
+    static_assert(sizeof(SurfaceSpan) <= 16);
+
+
+    namespace internal {
+        constexpr BaseTextureSurfaceSpan::operator SurfaceView() const noexcept {
+            return SurfaceView(format(), dimension(), extent(), getData());
+        }
+    }
+
+    constexpr TextureSurfaceSpan::operator SurfaceSpan() noexcept {
+        return SurfaceSpan(format(), dimension(), extent(), accessData());
+    }
 }

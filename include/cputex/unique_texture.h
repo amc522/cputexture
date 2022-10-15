@@ -96,7 +96,7 @@ namespace cputex {
         }
 
         [[nodiscard]]
-        cputex::SurfaceView getMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
+        cputex::TextureSurfaceView getMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
 
         [[nodiscard]]
         cputex::span<cputex::byte> accessMipSurfaceData(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) noexcept;
@@ -108,7 +108,7 @@ namespace cputex {
         }
 
         [[nodiscard]]
-        cputex::SurfaceSpan accessMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) noexcept;
+        cputex::TextureSurfaceSpan accessMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) noexcept;
 
         [[nodiscard]]
 		UniqueTexture clone() const noexcept;

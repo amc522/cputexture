@@ -8,7 +8,7 @@ namespace cputex {
     template<gpufmt::Format FormatV>
     class Clear {
     public:
-        void operator()(cputex::SurfaceSpan surface, [[maybe_unused]] const glm::dvec4 &clearColor) noexcept {
+        void operator()(cputex::TextureSurfaceSpan surface, [[maybe_unused]] const glm::dvec4 &clearColor) noexcept {
             using Traits = gpufmt::FormatTraits<FormatV>;
             using Storage = gpufmt::FormatStorage<FormatV>;
 
@@ -30,7 +30,7 @@ namespace cputex {
         }
     };
 
-    void clear(cputex::SurfaceSpan surface, const glm::dvec4 &clearColor) noexcept {
+    void clear(cputex::TextureSurfaceSpan surface, const glm::dvec4 &clearColor) noexcept {
         gpufmt::visitFormat<Clear>(surface.format(), surface, clearColor);
     }
 
@@ -92,24 +92,56 @@ namespace cputex {
         }
     };
 
+    bool flipHorizontal(cputex::SurfaceSpan surface) noexcept {
+        const cputex::Extent extent = surface.extent();
+        for(CountType volumeSlice = 0; volumeSlice < extent.z; ++volumeSlice) {
+            auto surfaceSlice = surface.accessVolumeSlice(volumeSlice);
+            bool result = gpufmt::visitFormat<HorizontalFlip>(surface.format(),
+                                                              surfaceSlice.getData(),
+                                                              surfaceSlice.accessData(),
+                                                              surfaceSlice.extent());
+            
+            if(!result) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     bool flipHorizontal(cputex::TextureSpan texture) noexcept {
         for(CountType arraySlice = 0u; arraySlice < texture.arraySize(); ++arraySlice) {
             for(CountType face = 0; face < texture.faces(); ++face) {
                 for(CountType mip = 0u; mip < texture.mips(); ++mip) {
-                    const Extent &mipExtent = texture.extent(mip);
+                    const bool result = flipHorizontal((SurfaceSpan)texture.accessMipSurface(arraySlice, face, mip));
 
-                    for(CountType volumeSlice = 0; volumeSlice < mipExtent.z; ++volumeSlice) {
-
-                        auto surface = texture.access2DSurfaceData(arraySlice, face, mip, volumeSlice);
-                        bool result = gpufmt::visitFormat<HorizontalFlip>(texture.format(),
-                                                                          surface,
-                                                                          surface,
-                                                                          texture.extent(mip));
-                        if(!result) {
-                            return false;
-                        }
+                    if(!result) {
+                        return false;
                     }
                 }
+            }
+        }
+
+        return true;
+    }
+
+    bool flipHorizontalTo(cputex::SurfaceView sourceSurface, cputex::SurfaceSpan destSurface) noexcept
+    {
+        if(!sourceSurface.equivalentLayout(destSurface)) {
+            return false;
+        }
+
+        const cputex::Extent extent = sourceSurface.extent();
+
+        for(CountType volumeSlice = 0; volumeSlice < extent.z; ++volumeSlice) {
+
+            bool result = gpufmt::visitFormat<HorizontalFlip>(sourceSurface.format(),
+                                                              sourceSurface.getVolumeSlice(volumeSlice).getData(),
+                                                              destSurface.accessVolumeSlice(volumeSlice).accessData(),
+                                                              cputex::Extent(extent.x, extent.y, 1));
+
+            if(!result) {
+                return false;
             }
         }
 
@@ -124,17 +156,10 @@ namespace cputex {
         for(CountType arraySlice = 0u; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
             for(CountType face = 0; face < sourceTexture.faces(); ++face) {
                 for(CountType mip = 0u; mip < sourceTexture.mips(); ++mip) {
-                    const Extent &mipExtent = sourceTexture.extent(mip);
+                    const bool result = flipHorizontalTo((SurfaceView)sourceTexture.getMipSurface(arraySlice, face, mip), (SurfaceSpan)destTexture.accessMipSurface(arraySlice, face, mip));
 
-                    for(CountType volumeSlice = 0; volumeSlice < mipExtent.z; ++volumeSlice) {
-
-                        bool result = gpufmt::visitFormat<HorizontalFlip>(sourceTexture.format(),
-                                                                          sourceTexture.get2DSurfaceData(arraySlice, face, mip, volumeSlice),
-                                                                          destTexture.access2DSurfaceData(arraySlice, face, mip, volumeSlice),
-                                                                          sourceTexture.extent(mip));
-                        if(!result) {
-                            return false;
-                        }
+                    if(!result) {
+                        return false;
                     }
                 }
             }
@@ -207,23 +232,48 @@ namespace cputex {
         }
     };
 
+    bool flipVertical(cputex::SurfaceSpan surface) noexcept
+    {
+        const cputex::Extent extent = surface.extent();
+        for(CountType volumeSlice = 0; volumeSlice < extent.z; ++volumeSlice) {
+            bool result = gpufmt::visitFormat<VerticalFlip>(surface.format(), surface.getData(), surface.accessData(), Extent(extent.x, extent.y, 1));
+
+            if(!result) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     bool flipVertical(cputex::TextureSpan texture) noexcept {
         for(CountType arraySlice = 0u; arraySlice < texture.arraySize(); ++arraySlice) {
             for(CountType face = 0; face < texture.faces(); ++face) {
                 for(CountType mip = 0u; mip < texture.mips(); ++mip) {
-                    const Extent &mipExtent = texture.extent(mip);
-
-                    for(CountType volumeSlice = 0u; volumeSlice < mipExtent.z; ++volumeSlice) {
-                        auto surface = texture.access2DSurfaceData(arraySlice, face, mip, volumeSlice);
-                        bool result = gpufmt::visitFormat<VerticalFlip>(texture.format(),
-                                                                        surface,
-                                                                        surface,
-                                                                        texture.extent(mip));
-                        if(!result) {
-                            return false;
-                        }
+                    const bool result = flipVertical((SurfaceSpan)texture.accessMipSurface(arraySlice, face, mip));
+                    
+                    if(!result) {
+                        return false;
                     }
                 }
+            }
+        }
+
+        return true;
+    }
+
+    bool flipVerticalTo(cputex::SurfaceView sourceSurface, cputex::SurfaceSpan destSurface) noexcept
+    {
+        if(!sourceSurface.equivalentLayout(destSurface)) {
+            return false;
+        }
+
+        const cputex::Extent extent = sourceSurface.extent();
+        for(CountType volumeSlice = 0; volumeSlice < extent.z; ++volumeSlice) {
+            bool result = gpufmt::visitFormat<VerticalFlip>(sourceSurface.format(), sourceSurface.getData(), destSurface.accessData(), Extent(extent.x, extent.y, 1));
+
+            if(!result) {
+                return false;
             }
         }
 
@@ -238,16 +288,10 @@ namespace cputex {
         for(CountType arraySlice = 0u; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
             for(CountType face = 0; face < sourceTexture.faces(); ++face) {
                 for(CountType mip = 0u; mip < sourceTexture.mips(); ++mip) {
-                    const Extent &mipExtent = sourceTexture.extent(mip);
+                    const bool result = flipVerticalTo((SurfaceView)sourceTexture.getMipSurface(arraySlice, face, mip), (SurfaceSpan)destTexture.accessMipSurface(arraySlice, face, mip));
 
-                    for(CountType volumeSlice = 0u; volumeSlice < mipExtent.z; ++volumeSlice) {
-                        bool result = gpufmt::visitFormat<VerticalFlip>(sourceTexture.format(),
-                                                                        sourceTexture.get2DSurfaceData(arraySlice, face, mip, volumeSlice),
-                                                                        destTexture.access2DSurfaceData(arraySlice, face, mip, volumeSlice),
-                                                                        sourceTexture.extent(mip));
-                        if(!result) {
-                            return false;
-                        }
+                    if(!result) {
+                        return false;
                     }
                 }
             }
@@ -421,10 +465,10 @@ namespace cputex {
         params.faces = 1;
         params.format = (useAltDecompressedFormat && info.decompressedFormatAlt != gpufmt::Format::UNDEFINED) ? info.decompressedFormatAlt : info.decompressedFormat;
         params.mips = 1;
-        params.surfaceByteAlignment = sourceSurface.surfaceByteAlignment();
+        params.surfaceByteAlignment = kDefaultSurfaceByteAlignment;//sourceSurface.surfaceByteAlignment();
 
         cputex::UniqueTexture decompressedTexture{ params };
-        decompressSurfaceTo(sourceSurface, decompressedTexture.accessMipSurface());
+        decompressSurfaceTo(sourceSurface, (SurfaceSpan)decompressedTexture.accessMipSurface());
 
         return decompressedTexture;
     }
@@ -471,7 +515,7 @@ namespace cputex {
         for(CountType arraySlice = 0; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
             for(CountType face = 0; face < sourceTexture.faces(); ++face) {
                 for(CountType mip = 0; mip < sourceTexture.mips(); ++mip) {
-                    decompressSurfaceTo(sourceTexture.getMipSurface(arraySlice, face, mip), decompressedTexture.accessMipSurface(arraySlice, face, mip));
+                    decompressSurfaceTo((SurfaceView)sourceTexture.getMipSurface(arraySlice, face, mip), (SurfaceSpan)decompressedTexture.accessMipSurface(arraySlice, face, mip));
                 }
             }
         }
@@ -499,7 +543,7 @@ namespace cputex {
         for(CountType arraySlice = 0; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
             for(CountType face = 0; face < sourceTexture.faces(); ++face) {
                 for(CountType mip = 0; mip < sourceTexture.mips(); ++mip) {
-                    if(!decompressSurfaceTo(sourceTexture.getMipSurface(arraySlice, face, mip), destTexture.accessMipSurface(arraySlice, face, mip))) {
+                    if(!decompressSurfaceTo((SurfaceView)sourceTexture.getMipSurface(arraySlice, face, mip), (SurfaceSpan)destTexture.accessMipSurface(arraySlice, face, mip))) {
                         return false;
                     }
                 }

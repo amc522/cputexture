@@ -10,4 +10,6 @@ namespace cputex {
     using SizeType = std::ptrdiff_t;
     using IndexType = gpufmt::ExtentComponent;
     using CountType = IndexType;
+
+    constexpr CountType kDefaultSurfaceByteAlignment = 4;
 }

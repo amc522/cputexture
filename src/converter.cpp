@@ -44,11 +44,11 @@ namespace cputex {
         params.faces = 1;
         params.format = mWriter.format();
         params.mips = 1;
-        params.surfaceByteAlignment = source.surfaceByteAlignment();
+        params.surfaceByteAlignment = kDefaultSurfaceByteAlignment;//source.surfaceByteAlignment();
 
         cputex::UniqueTexture destTexture{ params };
         
-        error = convertTo(source, destTexture.accessMipSurface());
+        error = convertTo(source, (SurfaceSpan)destTexture.accessMipSurface());
         
         if(error == ConvertError::None) {
             return destTexture;
@@ -208,8 +208,8 @@ namespace cputex {
         for(CountType arraySlice = 0; arraySlice < dest.arraySize(); ++arraySlice) {
             for(CountType face = 0; face < dest.faces(); ++face) {
                 for(CountType mip = 0; mip < dest.mips(); ++mip) {
-                    ConvertError error = convertTo(source.getMipSurface(arraySlice, face, mip),
-                                                   dest.accessMipSurface(arraySlice, face, mip));
+                    ConvertError error = convertTo((SurfaceView)source.getMipSurface(arraySlice, face, mip),
+                                                   (SurfaceSpan)dest.accessMipSurface(arraySlice, face, mip));
 
                     if(error != ConvertError::None) {
                         return error;

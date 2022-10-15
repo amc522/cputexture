@@ -24,7 +24,7 @@ namespace cputex {
         cputex::CountType arraySize = 0u;
         cputex::CountType faces = 0u;
         cputex::CountType mips = 0u;
-        cputex::CountType surfaceByteAlignment = 4u;
+        cputex::CountType surfaceByteAlignment = cputex::kDefaultSurfaceByteAlignment;
     };
 
     constexpr cputex::ExtentComponent maxExtentComponent = 16384;

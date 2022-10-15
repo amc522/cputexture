@@ -92,16 +92,16 @@ namespace cputex {
         return mTextureStorage.getMipSurfaceData(arraySlice, face, mip);
     }
 
-    cputex::SurfaceView UniqueTexture::getMipSurface(CountType arraySlice, CountType face, CountType mip) const noexcept {
-        return cputex::SurfaceView(mTextureStorage, arraySlice, face, mip);
+    cputex::TextureSurfaceView UniqueTexture::getMipSurface(CountType arraySlice, CountType face, CountType mip) const noexcept {
+        return cputex::TextureSurfaceView(mTextureStorage, arraySlice, face, mip);
     }
 
     cputex::span<cputex::byte> UniqueTexture::accessMipSurfaceData(CountType arraySlice, CountType face, CountType mip) noexcept {
         return mTextureStorage.accessMipSurfaceData(arraySlice, face, mip);
     }
 
-    cputex::SurfaceSpan UniqueTexture::accessMipSurface(CountType arraySlice, CountType face, CountType mip) noexcept {
-        return cputex::SurfaceSpan(mTextureStorage, arraySlice, face, mip);
+    cputex::TextureSurfaceSpan UniqueTexture::accessMipSurface(CountType arraySlice, CountType face, CountType mip) noexcept {
+        return cputex::TextureSurfaceSpan(mTextureStorage, arraySlice, face, mip);
     }
 
     UniqueTexture UniqueTexture::clone() const noexcept {

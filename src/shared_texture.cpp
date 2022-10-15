@@ -116,8 +116,8 @@ namespace cputex {
         return mTextureStorage.get2DSurfaceData(arraySlice, face, mip, volumeSlice);
     }
 
-    cputex::SurfaceView SharedTexture::getMipSurface(CountType arraySlice, CountType face, CountType mip) const noexcept {
-        return cputex::SurfaceView(mTextureStorage, arraySlice, face, mip);
+    cputex::TextureSurfaceView SharedTexture::getMipSurface(CountType arraySlice, CountType face, CountType mip) const noexcept {
+        return cputex::TextureSurfaceView(mTextureStorage, arraySlice, face, mip);
     }
 
     cputex::span<const cputex::byte> SharedTexture::getMipSurfaceData(CountType arraySlice, CountType face, CountType mip) const noexcept {

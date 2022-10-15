@@ -84,8 +84,8 @@ namespace cputex {
 
         template<class T>
         [[nodiscard]]
-        cputex::SurfaceSpan accessMipSurface(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept {
-            return cputex::SurfaceSpan{ mStorage, arraySlice, face, mip };
+        cputex::TextureSurfaceSpan accessMipSurface(cputex::CountType arraySlice, cputex::CountType face, cputex::CountType mip) noexcept {
+            return cputex::TextureSurfaceSpan{ mStorage, arraySlice, face, mip };
         }
 
         [[nodiscard]]
@@ -171,7 +171,7 @@ namespace cputex {
         }
 
         [[nodiscard]]
-        cputex::SurfaceView getMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
+        cputex::TextureSurfaceView getMipSurface(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
 
         [[nodiscard]]
         cputex::span<const cputex::byte> getMipSurfaceData(cputex::CountType arraySlice = 0, cputex::CountType face = 0, cputex::CountType mip = 0) const noexcept;
