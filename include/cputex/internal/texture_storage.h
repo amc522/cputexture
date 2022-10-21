@@ -6,7 +6,7 @@
 #include <glm/gtx/component_wise.hpp>
 
 #include <gpufmt/format.h>
-#include <gpufmt/traits.h>
+#include <gpufmt/info.h>
 
 #include <atomic>
 #include <memory>

@@ -474,31 +474,31 @@ namespace cputex {
             return mFormat;
         }
 
-        [[nodiscard]] constexpr cputex::SizeType sizeInBytes() const noexcept {
+        [[nodiscard]] cputex::SizeType sizeInBytes() const noexcept {
             const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(mFormat);
             const auto blockExtent = extent() / formatInfo.blockExtent;
 
             return blockExtent.x * blockExtent.y * blockExtent.z * formatInfo.blockByteSize;
         }
 
-        [[nodiscard]] constexpr cputex::SizeType volumeSliceByteSize() const noexcept {
+        [[nodiscard]] cputex::SizeType volumeSliceByteSize() const noexcept {
             const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(mFormat);
             const auto blockExtent = extent() / formatInfo.blockExtent;
             
             return blockExtent.x * blockExtent.y * formatInfo.blockByteSize;
         }
 
-        [[nodiscard]] constexpr cputex::span<const cputex::byte> getData() const noexcept {
+        [[nodiscard]] cputex::span<const cputex::byte> getData() const noexcept {
             return cputex::span<const cputex::byte>(mData, (size_t)sizeInBytes());
         }
 
         template<class T>
-        [[nodiscard]] constexpr cputex::span<const T> getDataAs() const noexcept {
+        [[nodiscard]] cputex::span<const T> getDataAs() const noexcept {
             return cputex::span<const T>(reinterpret_cast<const T*>(mData), ((size_t)sizeInBytes()) / sizeof(T));
         }
 
         // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
-        [[nodiscard]] constexpr cputex::SurfaceView getVolumeSlice(cputex::CountType volumeSlice) {
+        [[nodiscard]] cputex::SurfaceView getVolumeSlice(cputex::CountType volumeSlice) {
             if (volumeSlice >= mExtent.z) { return {}; }
 
             const TextureDimension viewDimension = dimension();
@@ -622,31 +622,31 @@ namespace cputex {
             return mFormat;
         }
 
-        [[nodiscard]] constexpr cputex::SizeType sizeInBytes() const noexcept {
+        [[nodiscard]] cputex::SizeType sizeInBytes() const noexcept {
             const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(mFormat);
             const auto blockExtent = extent() / formatInfo.blockExtent;
 
             return blockExtent.x * blockExtent.y * blockExtent.z * formatInfo.blockByteSize;
         }
 
-        [[nodiscard]] constexpr cputex::SizeType volumeSliceByteSize() const noexcept {
+        [[nodiscard]] cputex::SizeType volumeSliceByteSize() const noexcept {
             const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(mFormat);
             const auto blockExtent = extent() / formatInfo.blockExtent;
 
             return blockExtent.x * blockExtent.y * formatInfo.blockByteSize;
         }
 
-        [[nodiscard]] constexpr cputex::span<const cputex::byte> getData() const noexcept {
+        [[nodiscard]] cputex::span<const cputex::byte> getData() const noexcept {
             return cputex::span<const cputex::byte>(mData, (size_t)sizeInBytes());
         }
 
         template<class T>
-        [[nodiscard]] constexpr cputex::span<const T> getDataAs() const noexcept {
+        [[nodiscard]] cputex::span<const T> getDataAs() const noexcept {
             return cputex::span<const T>(reinterpret_cast<const T*>(mData), ((size_t)sizeInBytes) / sizeof(T));
         }
 
         // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
-        [[nodiscard]] constexpr SurfaceView getVolumeSlice(cputex::CountType volumeSlice) const noexcept{
+        [[nodiscard]] SurfaceView getVolumeSlice(cputex::CountType volumeSlice) const noexcept{
             if (volumeSlice >= mExtent.z) { return {}; }
 
             const TextureDimension viewDimension = dimension();
@@ -656,17 +656,17 @@ namespace cputex {
             return SurfaceView(mFormat, (viewDimension == TextureDimension::Texture3D) ? TextureDimension::Texture2D : viewDimension, newExtent, getData().subspan(sliceByteSize * volumeSlice, sliceByteSize));
         }
 
-        [[nodiscard]] constexpr cputex::span<cputex::byte> accessData() noexcept {
+        [[nodiscard]] cputex::span<cputex::byte> accessData() noexcept {
             return cputex::span<cputex::byte>(mData, (size_t)sizeInBytes());
         }
 
         template<class T>
-        [[nodiscard]] constexpr cputex::span<T> accessDataAs() noexcept {
+        [[nodiscard]] cputex::span<T> accessDataAs() noexcept {
             return cputex::span<T>(reinterpret_cast<T*>(mData), ((size_t)sizeInBytes()) / sizeof(T));
         }
 
         // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
-        [[nodiscard]] constexpr SurfaceSpan accessVolumeSlice(cputex::CountType volumeSlice) noexcept {
+        [[nodiscard]] SurfaceSpan accessVolumeSlice(cputex::CountType volumeSlice) noexcept {
             if (volumeSlice >= mExtent.z) { return {}; }
 
             const TextureDimension viewDimension = dimension();
