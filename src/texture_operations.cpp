@@ -168,26 +168,6 @@ namespace cputex {
         return true;
     }
 
-    cputex::UniqueTexture flipHorizontalCopy(cputex::TextureView texture) noexcept {
-        TextureParams params;
-        params.dimension = texture.dimension();
-        params.arraySize = texture.arraySize();
-        params.faces = texture.faces();
-        params.mips = texture.mips();
-        params.format = texture.format();
-        params.extent = texture.extent();
-        params.surfaceByteAlignment = texture.surfaceByteAlignment();
-
-        UniqueTexture destTexture{ params };
-
-        if(!flipHorizontalTo(texture, static_cast<TextureSpan>(destTexture))) {
-            return {};
-        }
-
-        return destTexture;
-    }
-
-
     template<gpufmt::Format FormatV>
     class VerticalFlip {
     public:
@@ -298,23 +278,6 @@ namespace cputex {
         }
 
         return true;
-    }
-
-    cputex::UniqueTexture flipVerticalCopy(cputex::TextureView texture) noexcept {
-        TextureParams params;
-        params.dimension = texture.dimension();
-        params.arraySize = texture.arraySize();
-        params.faces = texture.faces();
-        params.mips = texture.mips();
-        params.format = texture.format();
-        params.extent = texture.extent();
-        UniqueTexture destTexture{ params };
-
-        if(!flipVerticalTo(texture, static_cast<TextureSpan>(destTexture))) {
-            return {};
-        }
-
-        return destTexture;
     }
 
     template<gpufmt::Format FormatV>
@@ -451,28 +414,6 @@ namespace cputex {
         }
     };
 
-    cputex::UniqueTexture decompressSurface(cputex::SurfaceView sourceSurface, bool useAltDecompressedFormat) noexcept {
-        const gpufmt::FormatInfo &info = gpufmt::formatInfo(sourceSurface.format());
-
-        if(!info.decompressible) {
-            return UniqueTexture{};
-        }
-
-        cputex::TextureParams params;
-        params.arraySize = 1;
-        params.dimension = sourceSurface.dimension();
-        params.extent = sourceSurface.extent();
-        params.faces = 1;
-        params.format = (useAltDecompressedFormat && info.decompressedFormatAlt != gpufmt::Format::UNDEFINED) ? info.decompressedFormatAlt : info.decompressedFormat;
-        params.mips = 1;
-        params.surfaceByteAlignment = kDefaultSurfaceByteAlignment;//sourceSurface.surfaceByteAlignment();
-
-        cputex::UniqueTexture decompressedTexture{ params };
-        decompressSurfaceTo(sourceSurface, (SurfaceSpan)decompressedTexture.accessMipSurface());
-
-        return decompressedTexture;
-    }
-
     bool decompressSurfaceTo(cputex::SurfaceView sourceSurface, cputex::SurfaceSpan destSurface) noexcept {
         const gpufmt::FormatInfo &info = gpufmt::formatInfo(sourceSurface.format());
 
@@ -492,35 +433,6 @@ namespace cputex {
 
         gpufmt::DecompressError error = gpufmt::visitFormat<Decompressor>(sourceSurface.format(), sourceSurface, destSurface);
         return error == gpufmt::DecompressError::None;
-    }
-
-    cputex::UniqueTexture decompressTexture(cputex::TextureView sourceTexture, bool useAltDecompressedFormat) noexcept {
-        const gpufmt::FormatInfo &info = gpufmt::formatInfo(sourceTexture.format());
-
-        if(!info.decompressible) {
-            return UniqueTexture{};
-        }
-
-        cputex::TextureParams params;
-        params.arraySize = sourceTexture.arraySize();
-        params.dimension = sourceTexture.dimension();
-        params.extent = sourceTexture.extent();
-        params.faces = sourceTexture.faces();
-        params.format = (useAltDecompressedFormat && info.decompressedFormatAlt != gpufmt::Format::UNDEFINED) ? info.decompressedFormatAlt : info.decompressedFormat;
-        params.mips = sourceTexture.mips();
-        params.surfaceByteAlignment = sourceTexture.surfaceByteAlignment();
-
-        cputex::UniqueTexture decompressedTexture{ params };
-
-        for(CountType arraySlice = 0; arraySlice < sourceTexture.arraySize(); ++arraySlice) {
-            for(CountType face = 0; face < sourceTexture.faces(); ++face) {
-                for(CountType mip = 0; mip < sourceTexture.mips(); ++mip) {
-                    decompressSurfaceTo((SurfaceView)sourceTexture.getMipSurface(arraySlice, face, mip), (SurfaceSpan)decompressedTexture.accessMipSurface(arraySlice, face, mip));
-                }
-            }
-        }
-
-        return decompressedTexture;
     }
 
     bool decompressTextureTo(cputex::TextureView sourceTexture, cputex::TextureSpan destTexture) noexcept {
