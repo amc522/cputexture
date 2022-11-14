@@ -81,6 +81,7 @@ workspace "cputex"
         
         includedirs {
             "../../include",
+            "../../thirdparty/directx/include",
             "../../thirdparty/gl",
             "../../thirdparty/glm/include",
             "../../thirdparty/gpuformat/include",
@@ -113,6 +114,7 @@ workspace "cputex"
 
         includedirs {
             "../../include",
+            "../../thirdparty/directx/include",
             "../../thirdparty/gl",
             "../../thirdparty/glm/include",
             "../../thirdparty/gpuformat/include",

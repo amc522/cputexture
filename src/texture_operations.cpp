@@ -289,16 +289,19 @@ namespace cputex {
 
             if constexpr(!std::is_void_v<Traits::BlockType>)
             {
-                if((sourceOffset.x + copyExtent.x) >= sourceSurface.extent().x ||
-                   (sourceOffset.y + copyExtent.y) >= sourceSurface.extent().y ||
-                   (sourceOffset.z + copyExtent.z) >= sourceSurface.extent().z)
+                const cputex::Extent sourceExtent = sourceSurface.extent();
+                const cputex::Extent destExtent = destSurface.extent();
+
+                if((sourceOffset.x + copyExtent.x) > sourceExtent.x ||
+                   (sourceOffset.y + copyExtent.y) > sourceExtent.y ||
+                   (sourceOffset.z + copyExtent.z) > sourceExtent.z)
                 {
                     return false;
                 }
 
-                if((destOffset.x + copyExtent.x) >= destSurface.extent().x ||
-                   (destOffset.y + copyExtent.y) >= destSurface.extent().y ||
-                   (destOffset.z + copyExtent.z) >= destSurface.extent().z)
+                if((destOffset.x + copyExtent.x) > destExtent.x ||
+                   (destOffset.y + copyExtent.y) > destExtent.y ||
+                   (destOffset.z + copyExtent.z) > destExtent.z)
                 {
                     return false;
                 }
@@ -324,33 +327,28 @@ namespace cputex {
                     return false;
                 }
 
-                const auto sourceData = sourceSurface.getDataAs<Traits::BlockType>();
-                auto destData = destSurface.accessDataAs<Traits::BlockType>();
+                const auto sourceBlockData = sourceSurface.getDataAs<Traits::BlockType>();
+                auto destBlockData = destSurface.accessDataAs<Traits::BlockType>();
 
-                const auto sourceBlockOffset = cputex::Extent{ sourceOffset.x / Traits::BlockExtent.x,
-                    sourceOffset.y / Traits::BlockExtent.y,
-                    sourceOffset.z / Traits::BlockExtent.z };
+                const auto sourceBlockExtent = sourceExtent / Traits::BlockExtent;
+                const auto destBlockExtent = destExtent / Traits::BlockExtent;
+                const auto copyBlockExtent = copyExtent / Traits::BlockExtent;
 
-                const auto destBlockOffset = cputex::Extent{ destOffset.x / Traits::BlockExtent.x,
-                    destOffset.y / Traits::BlockExtent.y,
-                    destOffset.z / Traits::BlockExtent.z };
+                const auto sourceBlockOffset = sourceOffset / Traits::BlockExtent;
+                const auto destBlockOffset = destOffset / Traits::BlockExtent;
 
-                const auto blockCopyExtent = cputex::Extent{ copyExtent.x / Traits::BlockExtent.x,
-                    copyExtent.y / Traits::BlockExtent.y,
-                    copyExtent.z / Traits::BlockExtent.z };
+                const auto sourceSliceBlockSize = sourceBlockExtent.x * sourceBlockExtent.y;
+                const auto destSliceBlockSize = destBlockExtent.x * destBlockExtent.y;
 
-                for(CountType arraySlice = 0; arraySlice < blockCopyExtent.z; ++arraySlice) {
-                    for(CountType row = 0; row < blockCopyExtent.y; ++row) {
-                        const auto sourceRow = sourceData.subspan((arraySlice + sourceBlockOffset.z) * (static_cast<size_t>(blockCopyExtent.y) * static_cast<size_t>(blockCopyExtent.x)) +
-                                                                  (row + sourceBlockOffset.y) * blockCopyExtent.x, blockCopyExtent.x);
+                for(CountType slice = 0; slice < copyBlockExtent.z; ++slice) {
+                    for(CountType row = 0; row < copyBlockExtent.y; ++row) {
+                        const auto sourceBlockDataOffset = (sourceBlockOffset.z + slice) * sourceSliceBlockSize + (sourceBlockOffset.y + row) * sourceBlockExtent.x + sourceBlockOffset.x;
+                        const auto sourceSubspan = sourceBlockData.subspan(sourceBlockDataOffset, copyBlockExtent.x);
 
-                        auto destRow = destData.subspan((arraySlice + destBlockOffset.z) * (static_cast<size_t>(blockCopyExtent.y) * static_cast<size_t>(blockCopyExtent.x)) +
-                                                        (row + destBlockOffset.y) * blockCopyExtent.x, blockCopyExtent.x);
+                        const auto destBlockDataOffset = (destBlockOffset.z + slice) * destSliceBlockSize + (destBlockOffset.y + row) * destBlockExtent.x + destBlockOffset.x;
+                        auto destSubspan = destBlockData.subspan(destBlockDataOffset, copyBlockExtent.x);
 
-                        for(CountType column = 0; column < blockCopyExtent.x; ++column) {
-                            const auto sourceValue = sourceRow[sourceBlockOffset.x + column];
-                            destRow[destBlockOffset.x + column] = sourceValue;
-                        }
+                        std::copy(sourceSubspan.begin(), sourceSubspan.end(), destSubspan.begin());
                     }
                 }
 

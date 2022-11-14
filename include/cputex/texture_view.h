@@ -499,10 +499,11 @@ namespace cputex {
 
         // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
         [[nodiscard]] cputex::SurfaceView getVolumeSlice(cputex::CountType volumeSlice) {
-            if (volumeSlice >= mExtent.z) { return {}; }
+            const cputex::Extent surfaceExtent = extent();
+            if(volumeSlice >= surfaceExtent.z) { return {}; }
 
             const TextureDimension viewDimension = dimension();
-            cputex::Extent newExtent = extent();
+            cputex::Extent newExtent = surfaceExtent;
             newExtent.z = 1;
             const cputex::SizeType sliceByteSize = volumeSliceByteSize();
             return SurfaceView(mFormat, (viewDimension == TextureDimension::Texture3D) ? TextureDimension::Texture2D : viewDimension, newExtent, getData().subspan(sliceByteSize * volumeSlice, sliceByteSize));
@@ -558,6 +559,7 @@ namespace cputex {
         }
 
         SurfaceSpan(TextureSurfaceSpan surfaceSpan) noexcept
+            : SurfaceSpan(surfaceSpan.format(), surfaceSpan.dimension(), surfaceSpan.extent(), surfaceSpan.accessData())
         {}
 
         constexpr SurfaceSpan(const SurfaceSpan&) noexcept = default;
@@ -647,10 +649,11 @@ namespace cputex {
 
         // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
         [[nodiscard]] SurfaceView getVolumeSlice(cputex::CountType volumeSlice) const noexcept{
-            if (volumeSlice >= mExtent.z) { return {}; }
+            const cputex::Extent surfaceExtent = extent();
+            if (volumeSlice >= surfaceExtent.z) { return {}; }
 
             const TextureDimension viewDimension = dimension();
-            cputex::Extent newExtent = extent();
+            cputex::Extent newExtent = surfaceExtent;
             newExtent.z = 1;
             const cputex::SizeType sliceByteSize = volumeSliceByteSize();
             return SurfaceView(mFormat, (viewDimension == TextureDimension::Texture3D) ? TextureDimension::Texture2D : viewDimension, newExtent, getData().subspan(sliceByteSize * volumeSlice, sliceByteSize));
@@ -667,10 +670,11 @@ namespace cputex {
 
         // For 1d and 2d textures, calling with an index of 0 will be the same as calling getData().
         [[nodiscard]] SurfaceSpan accessVolumeSlice(cputex::CountType volumeSlice) noexcept {
-            if (volumeSlice >= mExtent.z) { return {}; }
+            const cputex::Extent surfaceExtent = extent();
+            if (volumeSlice >= surfaceExtent.z) { return {}; }
 
             const TextureDimension viewDimension = dimension();
-            cputex::Extent newExtent = extent();
+            cputex::Extent newExtent = surfaceExtent;
             newExtent.z = 1;
             const cputex::SizeType sliceByteSize = volumeSliceByteSize();
             return SurfaceSpan(mFormat, (viewDimension == TextureDimension::Texture3D) ? TextureDimension::Texture2D : viewDimension, newExtent, accessData().subspan(sliceByteSize * volumeSlice, sliceByteSize));
