@@ -1,0 +1,59 @@
+cmake_minimum_required(VERSION 3.7...3.25 FATAL_ERROR)
+
+if(${CMAKE_VERSION} VERSION_LESS 3.12)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
+
+option(CPUTEX_TEST "Generate cputexture test executable [ON, OFF]" OFF)
+
+set(VCPKG_MANIFEST_MODE ON)
+
+project(cputexture VERSION 1.0 
+                   LANGUAGES CXX)
+
+add_subdirectory(gpuformat)
+
+add_library(cputex STATIC include/cputex/utility.h
+                          include/cputex/config.h
+                          include/cputex/converter.h
+                          include/cputex/d3d12.h
+                          include/cputex/definitions.h
+                          include/cputex/fwd.h
+                          include/cputex/sampler.h
+                          include/cputex/shared_texture.h
+                          include/cputex/string.h
+                          include/cputex/texture_operations.h
+                          include/cputex/texture_view.h
+                          include/cputex/unique_texture.h
+                          include/cputex/internal/texture_storage.h
+                          src/converter.cpp
+                          src/d3d12.cpp
+                          src/sampler.cpp
+                          src/shared_texture.cpp
+                          src/texture_operations.cpp
+                          src/unique_texture.cpp
+                          cputexture.natvis)
+
+if(WIN32)
+    target_compile_definitions(cputex PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif(WIN32)
+
+target_include_directories(cputex PUBLIC include
+                                         thirdparty/directx/include)
+
+target_link_libraries(cputex PUBLIC gpufmt)
+
+target_compile_features(cputex PUBLIC cxx_std_20)
+
+if(CPUTEX_TEST)
+    
+    add_executable(cputex_test test/test.cpp)
+
+    if(WIN32)
+        target_compile_definitions(cputex PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+    endif(WIN32)
+
+    target_link_libraries(cputex_test PUBLIC gpufmt cputex)
+
+    target_compile_features(cputex_test PUBLIC cxx_std_20)
+endif(CPUTEX_TEST)
