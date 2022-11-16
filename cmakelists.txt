@@ -5,13 +5,16 @@ if(${CMAKE_VERSION} VERSION_LESS 3.12)
 endif()
 
 option(CPUTEX_TEST "Generate cputexture test executable [ON, OFF]" OFF)
+option(CPUTEX_ADD_GPUFMT "Whether or not the cputexture project is responsible for adding gpuformat as a subdirectory [ON, OFF]" ON)
 
 set(VCPKG_MANIFEST_MODE ON)
 
 project(cputexture VERSION 1.0 
                    LANGUAGES CXX)
 
-add_subdirectory(gpuformat)
+if(CPUTEX_ADD_GPUFMT)
+    add_subdirectory(gpuformat)
+endif(CPUTEX_ADD_GPUFMT)
 
 add_library(cputex STATIC include/cputex/utility.h
                           include/cputex/config.h
