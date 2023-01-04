@@ -46,6 +46,9 @@ tl::expected<CreateTextureResult, HRESULT> createTexture(ID3D12Device* d3d12Devi
         dxgiFormat = gpufmt::dxgi::typelessFormat(dxgiFormat).value_or(dxgiFormat);
     }
 
+
+    const gpufmt::FormatInfo& formatInfo = gpufmt::formatInfo(params.format);
+
     //-----------------------------------------------------------------------------------
     // 1.a.
     // Get the alignment and size of the resource that will actually be used on the gpu.
@@ -53,10 +56,10 @@ tl::expected<CreateTextureResult, HRESULT> createTexture(ID3D12Device* d3d12Devi
     D3D12_RESOURCE_DESC textureDesc = {};
     textureDesc.Dimension = getD3d12ResourceDimension(params.dimension);
     textureDesc.Alignment = 0;
-    textureDesc.Width = (UINT64)params.extent.x;
-    textureDesc.Height = (UINT64)params.extent.y;
+    textureDesc.Width = (UINT64)std::max(params.extent.x, formatInfo.blockExtent.x);
+    textureDesc.Height = (UINT64)std::max(params.extent.y, formatInfo.blockExtent.y);
     textureDesc.DepthOrArraySize =
-        (params.dimension == cputex::TextureDimension::Texture3D) ? (UINT16)params.extent.z : (UINT16)params.arraySize;
+        (params.dimension == cputex::TextureDimension::Texture3D) ? (UINT16)params.extent.z : (UINT16)(params.arraySize * params.faces);
     textureDesc.MipLevels = (UINT16)params.mips;
     textureDesc.Format = dxgiFormat;
     textureDesc.SampleDesc = d3d12Params.sampleDesc;
@@ -183,49 +186,61 @@ HRESULT uploadTexture(ID3D12GraphicsCommandList* commandList, ID3D12Resource* de
 {
     // Using 15 because its the maximum number of mips a 16384x16384 texture can have plus 1.
     std::array<D3D12_SUBRESOURCE_DATA, 16> subresources;
-    UINT subresourceCount = 0;
+    UINT subresourceArrayCount = 0;
     UINT firstSubresource = 0;
     
     const gpufmt::FormatInfo& surfaceFormatInfo = gpufmt::formatInfo(sourceTexture.format());
 
-    for(int32_t arraySlice = 0; arraySlice < sourceTexture.arraySize(); ++arraySlice)
+    const UINT totalSubresourceCount = sourceTexture.arraySize() * sourceTexture.faces() * sourceTexture.mips();
+    UINT64 uploadBufferOffset = 0;
+
+    for(UINT subresourceIndex = 0; subresourceIndex < totalSubresourceCount; ++subresourceIndex)
     {
-        for(int32_t face = 0; face < sourceTexture.faces(); ++face)
+        UINT calculatedArraySlice, mip, planeSlice;
+        D3D12DecomposeSubresource(subresourceIndex, sourceTexture.mips(), sourceTexture.arraySize() * sourceTexture.faces(), mip, calculatedArraySlice, planeSlice);
+
+        const auto arraySlice = calculatedArraySlice / sourceTexture.faces();
+        const auto face = calculatedArraySlice % sourceTexture.faces();
+
+        // putting this assert here to check that surfaces are being access in order of incrementing d3d12
+        // subresource index
+        assert(arraySlice * sourceTexture.faces() * sourceTexture.mips() +
+                face * sourceTexture.mips() + mip ==
+                (int64_t)D3D12CalcSubresource(mip, arraySlice * sourceTexture.faces() + face, 0,
+                sourceTexture.mips(), sourceTexture.arraySize() * sourceTexture.faces()));
+
+        TextureSurfaceView surface = sourceTexture.getMipSurface(arraySlice, face, mip);
+
+        const auto rowPitch = surfaceFormatInfo.blockByteSize * ((surface.extent().x + surfaceFormatInfo.blockExtent.x - 1) / surfaceFormatInfo.blockExtent.x);
+        const auto blockRows = (surface.extent().y + surfaceFormatInfo.blockExtent.y - 1) / surfaceFormatInfo.blockExtent.y;
+        const auto slicePitch = blockRows * rowPitch;
+
+        D3D12_SUBRESOURCE_DATA& subresourceData = subresources[subresourceArrayCount++];
+        subresourceData.pData = surface.getData().data();
+        subresourceData.RowPitch = (LONG_PTR)rowPitch;
+        subresourceData.SlicePitch = (LONG_PTR)slicePitch;
+
+        if(subresourceArrayCount == subresources.size())
         {
-            for(int32_t mip = 0; mip < sourceTexture.mips(); ++mip)
-            {
-                // putting this assert here to check that surfaces are being access in order of incrementing d3d12
-                // subresource index
-                assert(arraySlice * sourceTexture.faces() * sourceTexture.mips() +
-                       face * sourceTexture.mips() + mip ==
-                       (int64_t)D3D12CalcSubresource(mip, arraySlice * sourceTexture.faces() + face, 0,
-                       sourceTexture.mips(), sourceTexture.arraySize() * sourceTexture.faces()));
+            uploadBufferOffset += UpdateSubresources<subresources.size()>(commandList, destResource, intermediateResource, uploadBufferOffset,
+                                                    firstSubresource, subresourceArrayCount, subresources.data());
 
-                TextureSurfaceView surface = sourceTexture.getMipSurface(arraySlice, face, mip);
+            // Intermediate buffer offset must be 512 byte aligned
+            // 
+            // D3D12 ERROR : ID3D12CommandList::CopyTextureRegion : D3D12_PLACED_SUBRESOURCE_FOOTPRINT::Offset must be
+            // a multiple of 512, aka.D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT.
+            // [RESOURCE_MANIPULATION ERROR #864: COPYTEXTUREREGION_INVALIDSRCOFFSET]
+            uploadBufferOffset = ((uploadBufferOffset + 511) >> 9) << 9;
 
-                const auto rowPitch = surfaceFormatInfo.blockByteSize * (surface.extent().x / surfaceFormatInfo.blockExtent.x);
-
-                D3D12_SUBRESOURCE_DATA& subresourceData = subresources[subresourceCount++];
-                subresourceData.pData = surface.getData().data();
-                subresourceData.RowPitch = (LONG_PTR)rowPitch;
-                subresourceData.SlicePitch = (LONG_PTR)surface.sizeInBytes();
-
-                if(subresourceCount == subresources.size())
-                {
-                    UpdateSubresources<subresources.size()>(commandList, destResource, intermediateResource, 0,
-                                                            firstSubresource, subresourceCount, subresources.data());
-
-                    firstSubresource = subresourceCount;
-                    subresourceCount = 0;
-                }
-            }
+            firstSubresource = subresourceIndex + 1;
+            subresourceArrayCount = 0;
         }
     }
-
-    if(subresourceCount != 0)
+    
+    if(subresourceArrayCount != 0)
     {
-        UpdateSubresources<subresources.size()>(commandList, destResource, intermediateResource, 0, firstSubresource,
-                                                subresourceCount, subresources.data());
+        UpdateSubresources<subresources.size()>(commandList, destResource, intermediateResource, uploadBufferOffset, firstSubresource,
+                                                subresourceArrayCount, subresources.data());
     }
 
     return S_OK;
@@ -284,6 +299,110 @@ createTextureAndUpload(ID3D12Device* d3d12Device,
     result.uploadResource = std::move(createUploadBufferResult.value());
 
     return result;
+}
+
+tl::expected<D3D12_SHADER_RESOURCE_VIEW_DESC, HRESULT> createShaderResourceViewDesc(TextureView cpuTexture, ResourceViewOptions options)
+{
+    const bool arrayView = options.forceArrayView || cpuTexture.arraySize() > 1;
+    const gpufmt::dxgi::FormatConversion conversion = gpufmt::dxgi::translateFormat(cpuTexture.format());
+
+    if(!conversion) { return tl::make_unexpected(E_INVALIDARG); }
+
+    if(!conversion.exact) { return tl::make_unexpected(E_INVALIDARG); }
+
+    options.arrayOffset = std::clamp(options.arrayOffset, 0, cpuTexture.arraySize() - 1);
+
+    if(options.arrayCount == -1)
+    {
+        options.arrayCount = cpuTexture.arraySize();    
+    }
+
+    options.arrayCount = std::clamp(options.arrayCount, 1, cpuTexture.arraySize() - options.arrayOffset);
+
+    options.mipOffset = std::clamp(options.mipOffset, 0, cpuTexture.mips() - 1);
+
+    if(options.mipCount == -1)
+    {
+        options.mipCount = cpuTexture.mips();
+    }
+
+    options.mipCount = std::clamp(options.mipCount, 1, cpuTexture.mips() - options.mipOffset);
+    D3D12_SHADER_RESOURCE_VIEW_DESC desc;
+    desc.Format = conversion.exact.value();
+    desc.Shader4ComponentMapping = options.shader4ComponentMapping;
+
+    if(cpuTexture.dimension() == TextureDimension::Texture1D && !arrayView)
+    {
+        desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+        desc.Texture1D.MipLevels = options.mipCount;
+        desc.Texture1D.MostDetailedMip = options.mipOffset;
+        desc.Texture1D.ResourceMinLODClamp = 0.0f;
+    }
+    else if(cpuTexture.dimension() == TextureDimension::Texture1D && arrayView)
+    {
+        desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
+        desc.Texture1DArray.ArraySize = options.arrayCount;
+        desc.Texture1DArray.FirstArraySlice = options.arrayOffset;
+        desc.Texture1DArray.MipLevels = options.mipCount;
+        desc.Texture1DArray.MostDetailedMip = options.mipOffset;
+        desc.Texture1DArray.ResourceMinLODClamp = 0.0f;
+    }
+    else if(cpuTexture.dimension() == TextureDimension::Texture2D && !arrayView)
+    {
+        desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        desc.Texture2D.MipLevels = options.mipCount;
+        desc.Texture2D.MostDetailedMip = options.mipOffset;
+        desc.Texture2D.PlaneSlice = 0;
+        desc.Texture2D.ResourceMinLODClamp = 0.0f;
+    }
+    else if(cpuTexture.dimension() == TextureDimension::Texture2D && arrayView)
+    {
+        desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+        desc.Texture2DArray.ArraySize = options.arrayCount;
+        desc.Texture2DArray.FirstArraySlice = options.arrayOffset;
+        desc.Texture2DArray.MipLevels = options.mipCount;
+        desc.Texture2DArray.MostDetailedMip = options.mipOffset;
+        desc.Texture2DArray.PlaneSlice = 0;
+        desc.Texture2DArray.ResourceMinLODClamp = 0.0f;
+    }
+    else if(cpuTexture.dimension() == TextureDimension::TextureCube && !arrayView)
+    {
+        desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+        desc.TextureCube.MipLevels = options.mipCount;
+        desc.TextureCube.MostDetailedMip = options.mipOffset;
+        desc.TextureCube.ResourceMinLODClamp = 0.0f;
+    }
+    else if(cpuTexture.dimension() == TextureDimension::TextureCube && arrayView)
+    {
+        desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+        desc.TextureCubeArray.NumCubes = options.arrayCount;
+        desc.TextureCubeArray.First2DArrayFace = options.arrayOffset;
+        desc.TextureCubeArray.MipLevels = options.mipCount;
+        desc.TextureCubeArray.MostDetailedMip = options.mipOffset;
+        desc.TextureCubeArray.ResourceMinLODClamp = 0.0f;
+    }
+    else
+    {
+        desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+        desc.Texture3D.MipLevels = options.mipCount;
+        desc.Texture3D.MostDetailedMip = options.mipOffset;
+        desc.Texture3D.ResourceMinLODClamp = 0.0f;
+    }
+
+    return desc;
+}
+
+HRESULT createShaderResourceView(ID3D12Device* d3d12Device, TextureView cpuTexture, ID3D12Resource* d3d12TextureResource, D3D12_CPU_DESCRIPTOR_HANDLE d3d12CpuDescriptorHandle, ResourceViewOptions options)
+{
+    tl::expected descResult = createShaderResourceViewDesc(cpuTexture, options);
+
+    if(!descResult) { return descResult.error(); }
+
+    const auto& desc = descResult.value();
+
+    d3d12Device->CreateShaderResourceView(d3d12TextureResource, &desc, d3d12CpuDescriptorHandle);
+    
+    return S_OK;
 }
 
 }

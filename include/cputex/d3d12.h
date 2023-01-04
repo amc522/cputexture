@@ -99,6 +99,27 @@ createTextureAndUpload(ID3D12Device* d3d12Device,
                        const cputex::d3d12::UploadBufferParams& d3d12UploadBufferParams);
 
 [[nodiscard]] uint64_t calcRequiredUploadBufferByteSize(ID3D12Resource* textureResource);
+
+
+struct ResourceViewOptions
+{
+    cputex::CountType arrayOffset = 0;
+    cputex::CountType arrayCount = -1;
+    cputex::CountType mipOffset = 0;
+    cputex::CountType mipCount = -1;
+    UINT shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+    bool forceArrayView = false;
+};
+
+[[nodiscard]] tl::expected<D3D12_SHADER_RESOURCE_VIEW_DESC, HRESULT> createShaderResourceViewDesc(TextureView cpuTexture,
+                                                                                                  ResourceViewOptions options);
+
+[[nodiscard]] HRESULT createShaderResourceView(ID3D12Device* d3d12Device,
+                                               TextureView cpuTexture,
+                                               ID3D12Resource* d3d12TextureResource,
+                                               D3D12_CPU_DESCRIPTOR_HANDLE d3d12CpuDescriptorHandle,
+                                               ResourceViewOptions options);
 }
 
 #endif // _WIN32

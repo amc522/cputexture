@@ -137,9 +137,13 @@ namespace cputex::internal {
                         const glm::tvec3<cputex::SizeType> mipExtentSizeT = mipExtent;
                         const glm::tvec3<cputex::SizeType> blockExtentSizeT = info.blockExtent;
 
+                        const auto rowByteSize = info.blockByteSize * ((mipExtent.x + info.blockExtent.x - 1) / info.blockExtent.x);
+                        const auto blockRows = (mipExtent.y + info.blockExtent.y - 1) / info.blockExtent.y;
+                        const auto sliceSizeInBytes = rowByteSize * blockRows;
+
                         SurfaceInfo surfaceInfo;
                         surfaceInfo.offset = sizeInBytes;
-                        surfaceInfo.sizeInBytes = glm::compMul((mipExtentSizeT + (blockExtentSizeT - glm::tvec3<cputex::SizeType>(1))) / blockExtentSizeT) * info.blockByteSize;;
+                        surfaceInfo.sizeInBytes = sliceSizeInBytes * mipExtent.z;
                         surfaceInfo.sizeInBytes = std::max(surfaceInfo.sizeInBytes, static_cast<cputex::SizeType>(info.blockByteSize));
 
                         //make sure everything is byte aligned
